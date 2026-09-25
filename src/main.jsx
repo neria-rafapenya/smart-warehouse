@@ -6,6 +6,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import './styles.css'
 import './detail.css'
 import './topnav.css'
+import './dropdown.css'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(
