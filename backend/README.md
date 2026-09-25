@@ -58,7 +58,19 @@ Endpoints iniciales:
 - `GET /api/v1/stock`
 - `GET /api/v1/suppliers`
 - `GET /api/v1/documents/invoices`
+- `POST /api/v1/documents/invoices` — recibe una factura PDF, extrae sus campos y la guarda en almacenamiento local.
+- `GET /api/v1/documents/procedures` — resumen de procedimientos obligatorios pendientes.
+- `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
+- `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
 - `GET /api/v1/events?limit=50`
+
+## Facturas PDF y documentos obligatorios
+
+Las facturas digitales se procesan con `pypdf`. Se extraen de forma determinista el proveedor mediante NIF, número, fecha, moneda, subtotal, impuestos y total. Si el PDF es un escaneo sin capa de texto, o faltan campos clave, queda en estado `pending_review`, se registra un evento y se genera una notificación interna.
+
+Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
+
+Los procedimientos iniciales son `PURCHASE_APPROVAL`, `RECEIVING_CHECK` e `INVOICE_MATCH`. Un documento subido a un procedimiento se vincula a `order_procedures`, pasa a `complete` y queda auditado.
 
 ## Plantilla de importación de pedidos
 

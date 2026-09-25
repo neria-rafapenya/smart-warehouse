@@ -1,9 +1,11 @@
 import csv
 import io
+import re
 from typing import Annotated, Callable
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from openpyxl import load_workbook
+from pypdf import PdfReader
 from pydantic import BaseModel, Field
 
 from ...application.services import WarehouseService
@@ -30,6 +32,55 @@ class CreateOrderRequest(BaseModel):
     warehouse_code: str = "MAD-01"
     requester_email: str = "laura.martin@smartwarehouse.local"
     external_order_id: str | None = None
+
+
+def _amount(value: str) -> float | None:
+    normalized = value.replace("€", "").replace("EUR", "").replace(" ", "").strip()
+    if not normalized:
+        return None
+    if "," in normalized and "." in normalized:
+        normalized = normalized.replace(".", "").replace(",", ".")
+    else:
+        normalized = normalized.replace(",", ".")
+    try:
+        return round(float(normalized), 2)
+    except ValueError:
+        return None
+
+
+def _extract_invoice(content: bytes) -> dict:
+    try:
+        reader = PdfReader(io.BytesIO(content))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as error:
+        raise HTTPException(status_code=422, detail=f"No se pudo leer el PDF: {error}") from error
+
+    invoice_match = re.search(r"(?:factura|invoice)\s*(?:n[ºo°.]?|number|no\.?)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9/_-]+)", text, re.IGNORECASE)
+    date_match = re.search(r"(?:fecha|date)\s*[:#-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text, re.IGNORECASE)
+    tax_id_match = re.search(r"\b([A-Z]\d{8}|\d{8}[A-Z])\b", text.upper())
+    total_match = re.search(r"(?:total(?:\s+factura)?|importe\s+total)\s*[:#-]?\s*([0-9][0-9., ]*)", text, re.IGNORECASE)
+    subtotal_match = re.search(r"(?:subtotal|base\s+imponible)\s*[:#-]?\s*([0-9][0-9., ]*)", text, re.IGNORECASE)
+    tax_match = re.search(r"(?:iva|impuestos?|tax)\s*[:#-]?\s*([0-9][0-9., ]*)", text, re.IGNORECASE)
+    invoice_date = None
+    if date_match:
+        day, month, year = re.split(r"[/-]", date_match.group(1))
+        invoice_date = f"{int(year):04d}-{int(month):02d}-{int(day):02d}" if len(year) == 4 else f"20{int(year):02d}-{int(month):02d}-{int(day):02d}"
+    extracted = {
+        "supplier_tax_id": tax_id_match.group(1) if tax_id_match else None,
+        "invoice_number": invoice_match.group(1).upper() if invoice_match else None,
+        "invoice_date": invoice_date,
+        "currency": "EUR",
+        "subtotal": _amount(subtotal_match.group(1)) if subtotal_match else None,
+        "tax": _amount(tax_match.group(1)) if tax_match else None,
+        "total": _amount(total_match.group(1)) if total_match else None,
+        "pages": len(reader.pages),
+        "text_detected": bool(text.strip()),
+    }
+    required = ("supplier_tax_id", "invoice_number", "invoice_date", "total")
+    complete = bool(text.strip()) and all(extracted.get(field) not in (None, "") for field in required)
+    extracted["extraction_status"] = "extracted" if complete else "needs_review"
+    extracted["confidence"] = 0.96 if complete else (0.45 if text.strip() else 0.0)
+    return extracted
 
 
 def build_router(service_provider: Callable[[], WarehouseService], environment: str) -> APIRouter:
@@ -113,6 +164,39 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/documents/invoices", tags=["documents"])
     def invoices(current: Annotated[WarehouseService, Depends(service)]):
         return current.invoices()
+
+    @router.post("/documents/invoices", status_code=201, tags=["documents"])
+    async def upload_invoice(file: UploadFile = File(...), current: WarehouseService = Depends(service)):
+        filename = file.filename or "invoice.pdf"
+        if not filename.lower().endswith(".pdf") and file.content_type != "application/pdf":
+            raise HTTPException(status_code=415, detail="Solo se admiten facturas PDF")
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=422, detail="La factura está vacía")
+        extracted = _extract_invoice(content)
+        try:
+            return current.save_invoice_document(filename, file.content_type or "application/pdf", content, extracted)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @router.get("/documents/procedures", tags=["documents"])
+    def procedures(current: Annotated[WarehouseService, Depends(service)]):
+        return current.procedures()
+
+    @router.get("/orders/{external_id}/procedures", tags=["documents"])
+    def order_procedures(external_id: str, current: Annotated[WarehouseService, Depends(service)]):
+        return current.procedures(external_id=external_id)
+
+    @router.post("/orders/{external_id}/procedures/{procedure_code}/documents", status_code=201, tags=["documents"])
+    async def upload_procedure_document(external_id: str, procedure_code: str, file: UploadFile = File(...), current: WarehouseService = Depends(service)):
+        filename = file.filename or "procedure-document"
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=422, detail="El documento está vacío")
+        try:
+            return current.save_procedure_document(external_id, procedure_code, filename, file.content_type or "application/octet-stream", content)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @router.get("/receipts", tags=["receiving"])
     def receipts(current: Annotated[WarehouseService, Depends(service)]):

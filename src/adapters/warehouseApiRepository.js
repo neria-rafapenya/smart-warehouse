@@ -33,6 +33,10 @@ function mapInvoice(item) {
   return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar' }
 }
 
+function mapProcedure(item) {
+  return { ...item, completed: Number(item.completed_orders || 0), missing: Number(item.missing_orders || 0), status: item.status || (Number(item.missing_orders || 0) > 0 ? 'missing' : 'complete') }
+}
+
 function mapEvent(item) {
   const tone = item.severity === 'critical' ? 'danger' : item.severity === 'warning' ? 'warning' : 'info'
   return { ...item, time: dateLabel(item.created_at), type: item.event_type, text: `${item.event_type} procesado`, detail: `Evento ${item.aggregate_id || item.id} registrado`, tone }
@@ -47,9 +51,10 @@ function mapReceipt(item) {
 export const warehouseRepository = {
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
+  uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
   async loadAll() {
-    const [dashboard, orders, stock, suppliers, invoices, events, receipts] = await Promise.all([
-      get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/events?limit=100'), get('/receipts'),
+    const [dashboard, orders, stock, suppliers, invoices, procedures, events, receipts] = await Promise.all([
+      get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/receipts'),
     ])
     const pending = Number(dashboard.orders_pending || 0)
     const lowStock = (stock || []).filter(item => item.status === 'replenish').length
@@ -60,7 +65,7 @@ export const warehouseRepository = {
         { label: 'Alertas activas', value: String(lowStock), change: 'stock bajo', tone: 'danger', icon: 'bi-bell' },
         { label: 'Referencias activas', value: String(dashboard.stock_items || 0), change: 'datos MySQL', tone: 'info', icon: 'bi-box-seam' },
       ],
-      orders: orders.map(mapOrder), stock: stock.map(mapStock), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), events: events.map(mapEvent), receipts: receipts.map(mapReceipt),
+      orders: orders.map(mapOrder), stock: stock.map(mapStock), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), receipts: receipts.map(mapReceipt),
     }
   },
 }

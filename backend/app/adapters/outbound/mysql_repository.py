@@ -1,7 +1,10 @@
 import json
 from datetime import datetime
 from collections.abc import Sequence
+from pathlib import Path
+import re
 from typing import Any
+from uuid import uuid4
 
 import mysql.connector
 
@@ -124,6 +127,131 @@ class MySQLWarehouseRepository:
             ORDER BY i.created_at DESC
             """
         )
+
+    def list_procedures(self, external_id: str | None = None) -> Sequence[dict]:
+        if external_id:
+            return self._fetch_all(
+                """
+                SELECT rp.code, rp.name, rp.description, rp.active,
+                       COALESCE(op.status, 'missing') AS status,
+                       op.checked_at, d.original_filename
+                FROM required_procedures rp
+                JOIN orders o ON o.external_id = %s
+                LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = o.id
+                LEFT JOIN documents d ON d.id = op.document_id
+                WHERE rp.active = TRUE
+                ORDER BY rp.code
+                """,
+                (external_id,),
+            )
+        return self._fetch_all(
+            """
+            SELECT rp.code, rp.name, rp.description, rp.active,
+                   COUNT(DISTINCT op.order_id) AS linked_orders,
+                   SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_orders,
+                   COUNT(DISTINCT o.id) - SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS missing_orders
+            FROM required_procedures rp
+            CROSS JOIN orders o
+            LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = o.id
+            WHERE rp.active = TRUE
+            GROUP BY rp.id
+            ORDER BY rp.code
+            """
+        )
+
+    def _storage_path(self, category: str, filename: str) -> tuple[str, Path]:
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(filename).name) or "document.pdf"
+        relative = Path("local") / category / f"{uuid4().hex}_{safe_name}"
+        root = Path(__file__).resolve().parents[4] / self.settings.local_storage_path
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return relative.as_posix(), target
+
+    def save_invoice_document(self, filename: str, mime_type: str, content: bytes, extracted: dict) -> dict:
+        storage_key, target = self._storage_path("invoices", filename)
+        target.write_bytes(content)
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            supplier = None
+            if extracted.get("supplier_tax_id"):
+                cursor.execute("SELECT id, legal_name FROM suppliers WHERE tax_id = %s LIMIT 1", (extracted["supplier_tax_id"],))
+                supplier = cursor.fetchone()
+            cursor.execute(
+                """INSERT INTO documents (document_type, original_filename, storage_key, mime_type, extraction_status, confidence, extracted_json, uploaded_by)
+                   VALUES ('invoice', %s, %s, %s, %s, %s, %s, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
+                (filename, storage_key, mime_type, extracted["extraction_status"], extracted.get("confidence"), json.dumps(extracted, ensure_ascii=False)),
+            )
+            document_id = cursor.lastrowid
+            invoice_number = extracted.get("invoice_number") or f"PENDING-{uuid4().hex[:10].upper()}"
+            cursor.execute(
+                """INSERT INTO invoices (document_id, supplier_id, invoice_number, invoice_date, currency, subtotal, tax_amount, total, status)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   ON DUPLICATE KEY UPDATE document_id = VALUES(document_id), invoice_date = VALUES(invoice_date), subtotal = VALUES(subtotal), tax_amount = VALUES(tax_amount), total = VALUES(total), status = VALUES(status)""",
+                (document_id, supplier["id"] if supplier else None, invoice_number, extracted.get("invoice_date"), extracted.get("currency", "EUR"), extracted.get("subtotal"), extracted.get("tax"), extracted.get("total"), "exportable" if extracted["extraction_status"] == "extracted" and supplier else "pending_review"),
+            )
+            severity = "info" if extracted["extraction_status"] == "extracted" and supplier else "warning"
+            event_payload = {"filename": filename, "invoice_number": invoice_number, "confidence": extracted.get("confidence"), "storage_key": storage_key}
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('document.extracted', %s, 'invoice', %s, 'system', %s)",
+                (severity, invoice_number, json.dumps(event_payload, ensure_ascii=False)),
+            )
+            event_id = cursor.lastrowid
+            if severity == "warning":
+                cursor.execute(
+                    "INSERT INTO notifications (event_id, channel, status, title, body) VALUES (%s, 'in_app', 'pending', %s, %s)",
+                    (event_id, "Factura requiere revisión", f"{filename}: faltan datos fiables o no se ha identificado el proveedor."),
+                )
+            connection.commit()
+            return {"invoice_number": invoice_number, "filename": filename, "status": "exportable" if severity == "info" else "pending_review", "confidence": extracted.get("confidence"), "storage_key": storage_key}
+        except Exception:
+            connection.rollback()
+            if target.exists():
+                target.unlink()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+    def save_procedure_document(self, external_id: str, procedure_code: str, filename: str, mime_type: str, content: bytes) -> dict:
+        storage_key, target = self._storage_path("procedures", filename)
+        target.write_bytes(content)
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT id FROM orders WHERE external_id = %s LIMIT 1", (external_id,))
+            order = cursor.fetchone()
+            cursor.execute("SELECT id, name FROM required_procedures WHERE code = %s AND active = TRUE LIMIT 1", (procedure_code,))
+            procedure = cursor.fetchone()
+            if not order or not procedure:
+                raise ValueError("Pedido o procedimiento obligatorio no encontrado")
+            cursor.execute(
+                """INSERT INTO documents (document_type, original_filename, storage_key, mime_type, extraction_status, confidence, uploaded_by)
+                   VALUES ('procedure', %s, %s, %s, 'not_applicable', 1.0000, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
+                (filename, storage_key, mime_type),
+            )
+            document_id = cursor.lastrowid
+            cursor.execute(
+                """INSERT INTO order_procedures (order_id, procedure_id, document_id, status, checked_at)
+                   VALUES (%s, %s, %s, 'complete', NOW())
+                   ON DUPLICATE KEY UPDATE document_id = VALUES(document_id), status = 'complete', checked_at = NOW()""",
+                (order["id"], procedure["id"], document_id),
+            )
+            payload = json.dumps({"filename": filename, "storage_key": storage_key, "procedure_code": procedure_code}, ensure_ascii=False)
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('procedure.completed', 'info', 'order', %s, 'user', %s)",
+                (external_id, payload),
+            )
+            connection.commit()
+            return {"external_id": external_id, "procedure_code": procedure_code, "procedure_name": procedure["name"], "status": "complete", "filename": filename}
+        except Exception:
+            connection.rollback()
+            if target.exists():
+                target.unlink()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
 
     def list_receipts(self) -> Sequence[dict]:
         return self._fetch_all(

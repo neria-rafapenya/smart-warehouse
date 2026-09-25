@@ -51,6 +51,15 @@ class WarehouseService:
     def invoices(self) -> list[dict]:
         return list(self.repository.list_invoices())
 
+    def procedures(self, external_id: str | None = None) -> list[dict]:
+        return list(self.repository.list_procedures(external_id=external_id))
+
+    def save_invoice_document(self, filename: str, mime_type: str, content: bytes, extracted: dict) -> dict:
+        return self.repository.save_invoice_document(filename, mime_type, content, extracted)
+
+    def save_procedure_document(self, external_id: str, procedure_code: str, filename: str, mime_type: str, content: bytes) -> dict:
+        return self.repository.save_procedure_document(external_id, procedure_code, filename, mime_type, content)
+
     def receipts(self) -> list[dict]:
         return list(self.repository.list_receipts())
 
