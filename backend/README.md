@@ -4,6 +4,8 @@ Base de Fase 2 preparada con arquitectura hexagonal. La API aún no se activa en
 
 La integración prevista es **React → FastAPI REST → casos de uso → repositorios MySQL**. Ningún código del frontend tendrá credenciales ni conexión directa a MySQL. En AWS, FastAPI será desplegado detrás de un balanceador/API Gateway y MySQL permanecerá en una red privada.
 
+En macOS, el repositorio usa `MYSQL_USE_PURE=true` por defecto. Esto evita la extensión nativa C de `mysql-connector-python`, que puede producir `EXC_BAD_ACCESS` al abrir varias conexiones concurrentes con Python 3.13.
+
 ```text
 backend/
 ├── app/

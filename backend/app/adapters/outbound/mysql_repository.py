@@ -20,6 +20,7 @@ class MySQLWarehouseRepository:
             database=self.settings.mysql_database,
             user=self.settings.mysql_user,
             password=self.settings.mysql_password,
+            use_pure=self.settings.mysql_use_pure,
         )
 
     def _fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[dict]:

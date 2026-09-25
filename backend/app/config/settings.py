@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     mysql_database: str = "smart_warehouse"
     mysql_user: str = "root"
     mysql_password: str = "root"
+    mysql_use_pure: bool = True
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
