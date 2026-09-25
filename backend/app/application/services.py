@@ -30,6 +30,12 @@ class WarehouseService:
             raise OrderNotFoundError(external_id)
         return result
 
+    def transition_order_status(self, external_id: str, to_status: str, reason: str | None = None) -> dict:
+        return self.repository.transition_order_status(external_id, to_status, reason)
+
+    def order_status_history(self, external_id: str) -> list[dict]:
+        return list(self.repository.list_order_status_history(external_id))
+
     def validate(self, external_id: str) -> ValidationDecision:
         order = self.order(external_id)
         decision = validate_order(

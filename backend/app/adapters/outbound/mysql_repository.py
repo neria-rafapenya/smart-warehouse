@@ -90,6 +90,43 @@ class MySQLWarehouseRepository:
         )
         return rows[0] if rows else None
 
+    def transition_order_status(self, external_id: str, to_status: str, reason: str | None = None) -> dict:
+        allowed = {
+            "pending": {"validated"}, "human_review": {"validated", "pending"}, "blocked": {"pending"},
+            "validated": {"approved", "pending"}, "approved": {"sent_to_supplier"},
+            "sent_to_supplier": {"received"}, "received": {"closed"}, "closed": set(),
+        }
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT id, status, requester_id FROM orders WHERE external_id = %s LIMIT 1 FOR UPDATE", (external_id,))
+            order = cursor.fetchone()
+            if not order:
+                raise ValueError(f"Pedido no encontrado: {external_id}")
+            if to_status not in allowed.get(order["status"], set()):
+                raise ValueError(f"Transición no permitida: {order['status']} → {to_status}")
+            cursor.execute("UPDATE orders SET status = %s, approved_at = CASE WHEN %s = 'approved' THEN NOW() ELSE approved_at END WHERE id = %s", (to_status, to_status, order["id"]))
+            cursor.execute("INSERT INTO order_status_history (order_id, from_status, to_status, reason, created_by) VALUES (%s, %s, %s, %s, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))", (order["id"], order["status"], to_status, reason))
+            payload = json.dumps({"from_status": order["status"], "to_status": to_status, "reason": reason}, ensure_ascii=False)
+            cursor.execute("INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('order.status_changed', 'info', 'order', %s, 'user', %s)", (external_id, payload))
+            connection.commit()
+            return {"external_id": external_id, "from_status": order["status"], "status": to_status, "reason": reason}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+    def list_order_status_history(self, external_id: str) -> Sequence[dict]:
+        return self._fetch_all(
+            """SELECT h.id, h.from_status, h.to_status, h.reason, h.created_at, u.full_name AS created_by
+               FROM order_status_history h JOIN orders o ON o.id = h.order_id
+               LEFT JOIN users u ON u.id = h.created_by
+               WHERE o.external_id = %s ORDER BY h.created_at DESC""",
+            (external_id,),
+        )
+
     def list_stock(self) -> Sequence[dict]:
         return self._fetch_all(
             """
@@ -750,7 +787,7 @@ class MySQLWarehouseRepository:
         connection = self._connect()
         cursor = connection.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT id, requester_id FROM orders WHERE external_id = %s", (external_id,))
+            cursor.execute("SELECT id, status, requester_id FROM orders WHERE external_id = %s", (external_id,))
             order = cursor.fetchone()
             if not order:
                 return
@@ -758,10 +795,12 @@ class MySQLWarehouseRepository:
                 "INSERT INTO validation_decisions (order_id, decision_status, risk, confidence, reasons) VALUES (%s, %s, %s, %s, %s)",
                 (order["id"], decision["status"], decision["risk"], 1.0, json.dumps(decision["reasons"], ensure_ascii=False))
             )
+            workflow_status = "validated" if decision["status"] == "human_review" else decision["status"]
             cursor.execute(
                 "UPDATE orders SET status = %s, risk = %s, approved_at = CASE WHEN %s = 'approved' THEN NOW() ELSE NULL END WHERE id = %s",
-                (decision["status"], decision["risk"], decision["status"], order["id"]),
+                (workflow_status, decision["risk"], workflow_status, order["id"]),
             )
+            cursor.execute("INSERT INTO order_status_history (order_id, from_status, to_status, reason) VALUES (%s, %s, %s, %s)", (order["id"], order.get("status"), workflow_status, "Validación automática"))
             severity = "info" if decision["risk"] == "green" else "critical" if decision["risk"] == "red" else "warning"
             payload = json.dumps({"decision_status": decision["status"], "risk": decision["risk"], "reasons": decision["reasons"]}, ensure_ascii=False)
             cursor.execute(
@@ -813,6 +852,12 @@ class MySQLWarehouseRepository:
                    VALUES (%s, %s, %s, %s, %s)
                    ON DUPLICATE KEY UPDATE requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
                 (order["id"], product["id"], quantity, unit_price, total),
+            )
+            cursor.execute(
+                """INSERT INTO order_status_history (order_id, from_status, to_status, reason)
+                   SELECT %s, NULL, 'pending', 'Pedido creado'
+                   WHERE NOT EXISTS (SELECT 1 FROM order_status_history WHERE order_id = %s)""",
+                (order["id"], order["id"]),
             )
             connection.commit()
             return {"external_id": external_id, "status": "pending", "risk": "yellow", "total": total}

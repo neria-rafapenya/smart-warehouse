@@ -70,6 +70,11 @@ class StockMovementRequest(BaseModel):
     reason: str | None = None
 
 
+class OrderStatusRequest(BaseModel):
+    status: str = Field(pattern="^(pending|validated|approved|sent_to_supplier|received|closed)$")
+    reason: str | None = None
+
+
 class AlertRuleRequest(BaseModel):
     code: str = Field(min_length=3, max_length=64)
     name: str = Field(min_length=3, max_length=160)
@@ -255,6 +260,17 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
             return current.order(external_id)
         except OrderNotFoundError as error:
             raise HTTPException(status_code=404, detail=f"Order {external_id} not found") from error
+
+    @router.post("/orders/{external_id}/status", tags=["orders"])
+    def transition_order_status(external_id: str, request: OrderStatusRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.transition_order_status(external_id, request.status, request.reason)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @router.get("/orders/{external_id}/status-history", tags=["orders"])
+    def order_status_history(external_id: str, current: Annotated[WarehouseService, Depends(service)]):
+        return current.order_status_history(external_id)
 
     @router.get("/orders/{external_id}/decisions", tags=["orders"])
     def decisions(external_id: str, current: Annotated[WarehouseService, Depends(service)]):

@@ -35,6 +35,7 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/006_alert_management.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/007_real_receipts.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/008_stock_movements.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/009_order_workflow.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -57,6 +58,8 @@ Endpoints iniciales:
 - `GET /api/v1/dashboard`
 - `GET /api/v1/orders?status=pending`
 - `GET /api/v1/orders/{external_id}`
+- `POST /api/v1/orders/{external_id}/status` — ejecuta una transición controlada del flujo.
+- `GET /api/v1/orders/{external_id}/status-history` — historial completo de estados.
 - `POST /api/v1/orders` — crea un pedido pendiente y registra su decisión determinista.
 - `POST /api/v1/imports/orders` — importa pedidos desde `.csv` o `.xlsx`.
 - `POST /api/v1/orders/{external_id}/validate`
@@ -107,6 +110,10 @@ La tabla `alert_rules` persiste reglas activas, tipo de evento, gravedad, canale
 ## Movimientos de stock
 
 `stock_movements` conserva cada entrada, salida, reserva, liberación y ajuste con sus deltas y saldos resultantes. El caso de uso bloquea la fila de stock durante la operación, evita salidas o reservas imposibles, actualiza `stock_items` y registra un evento de auditoría en la misma transacción.
+
+## Flujo de pedidos
+
+Los pedidos siguen las transiciones `pending → validated → approved → sent_to_supplier → received → closed`. El API rechaza saltos inválidos, persiste cada cambio en `order_status_history` y registra un evento `order.status_changed`. Los pedidos bloqueados o en revisión pueden volver a `pending` antes de continuar.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

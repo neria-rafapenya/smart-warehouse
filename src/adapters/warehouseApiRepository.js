@@ -16,8 +16,8 @@ const euro = value => `${Number(value || 0).toLocaleString('es-ES', { minimumFra
 const dateLabel = value => value ? new Date(value).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
 
 function mapOrder(order) {
-  const status = order.status === 'approved' ? 'Aprobado por IA' : order.status === 'blocked' ? 'Bloqueado' : order.status === 'pending' ? 'Revisión humana' : order.status
-  return { ...order, id: order.external_id, requester: order.requester || 'Sistema', area: 'Compras', product: order.product || 'Pedido multiproducto', qty: Number(order.requested_quantity || 0), total: euro(order.total), status, date: dateLabel(order.requested_at), reason: order.risk === 'red' ? 'Volumen atípico frente al histórico' : order.risk === 'yellow' ? 'Requiere comprobación de procedimiento' : 'Stock y demanda compatibles' }
+  const status = order.status === 'approved' ? 'Aprobado' : order.status === 'validated' ? 'Validado' : order.status === 'sent_to_supplier' ? 'Enviado a proveedor' : order.status === 'received' ? 'Recibido' : order.status === 'closed' ? 'Cerrado' : order.status === 'blocked' ? 'Bloqueado' : order.status === 'pending' ? 'Pendiente' : order.status === 'human_review' ? 'Revisión humana' : order.status
+  return { ...order, workflowStatus: order.status, id: order.external_id, requester: order.requester || 'Sistema', area: 'Compras', product: order.product || 'Pedido multiproducto', qty: Number(order.requested_quantity || 0), total: euro(order.total), status, date: dateLabel(order.requested_at), reason: order.risk === 'red' ? 'Volumen atípico frente al histórico' : order.risk === 'yellow' ? 'Requiere comprobación de procedimiento' : 'Stock y demanda compatibles' }
 }
 
 function mapStock(item) {
@@ -84,6 +84,8 @@ export const warehouseRepository = {
   updateAlertRule: (ruleId, payload) => send(`/alert-rules/${ruleId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
+  transitionOrderStatus: (externalId, status, reason) => send(`/orders/${externalId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, reason }) }),
+  orderStatusHistory: externalId => get(`/orders/${externalId}/status-history`),
   createReceipt: payload => send('/receipts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   createStockMovement: payload => send('/stock/movements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   async loadAll() {
