@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Smart Warehouse invoice extraction",
+  "type": "object",
+  "required": ["supplier_tax_id", "invoice_number", "invoice_date", "currency", "total"],
+  "properties": {
+    "supplier_tax_id": {"type": "string"},
+    "invoice_number": {"type": "string"},
+    "invoice_date": {"type": "string", "format": "date"},
+    "currency": {"type": "string", "enum": ["EUR"]},
+    "subtotal": {"type": "number"},
+    "tax": {"type": "number"},
+    "total": {"type": "number"},
+    "lines": {"type": "array", "items": {"type": "object", "required": ["description", "quantity", "unit_price"]}},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}
