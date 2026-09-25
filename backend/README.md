@@ -61,7 +61,7 @@ Endpoints iniciales:
 - `POST /api/v1/orders/{external_id}/status` — ejecuta una transición controlada del flujo.
 - `GET /api/v1/orders/{external_id}/status-history` — historial completo de estados.
 - `POST /api/v1/orders` — crea un pedido pendiente y registra su decisión determinista.
-- `POST /api/v1/imports/orders` — importa pedidos desde `.csv` o `.xlsx`.
+- `POST /api/v1/imports/orders` — valida y, con `confirm=true`, importa pedidos desde `.csv` o `.xlsx`; sin confirmación devuelve vista previa.
 - `POST /api/v1/orders/{external_id}/validate`
 - `GET /api/v1/stock`
 - `GET /api/v1/suppliers`
@@ -121,10 +121,12 @@ Los procedimientos iniciales son `PURCHASE_APPROVAL`, `RECEIVING_CHECK` e `INVOI
 
 ## Plantilla de importación de pedidos
 
-La plantilla versionada está en `backend/templates/order_import_columns.csv`. La primera fila debe contener estas columnas:
+Las plantillas físicas versionadas están en `backend/templates/order_import_columns.csv` y `backend/templates/order_import_columns.xlsx`. La primera fila debe contener estas columnas:
 
 ```text
 external_order_id,sku,product_description,quantity,unit_price,currency,supplier_code,requested_by,requested_at,required_procedure_code
 ```
 
 Son obligatorias `sku`, `quantity`, `unit_price` y `supplier_code`; el resto permite conservar trazabilidad documental y podrá ampliarse sin acoplar el frontend al formato concreto del proveedor. El endpoint devuelve filas importadas y errores por fila para revisión humana.
+
+La importación se realiza en dos pasos: primero devuelve una vista previa con validación de columnas, filas válidas y duplicados contra MySQL; después `confirm=true` importa únicamente las filas válidas. La interfaz permite descargar el informe CSV de errores antes de confirmar.

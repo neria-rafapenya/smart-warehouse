@@ -122,3 +122,6 @@ class WarehouseService:
 
     def import_orders(self, rows: list[dict]) -> dict:
         return self.repository.import_orders(rows)
+
+    def preview_import_orders(self, rows: list[dict]) -> dict:
+        return self.repository.preview_import_orders(rows)

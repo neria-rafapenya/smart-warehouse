@@ -8,7 +8,7 @@ import tempfile
 from typing import Annotated, Callable
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import load_workbook
 from pypdf import PdfReader
@@ -90,6 +90,52 @@ def _amount(value: str) -> float | None:
     normalized = value.replace("€", "").replace("EUR", "").replace(" ", "").strip()
     if not normalized:
         return None
+
+
+def _parse_order_import(filename: str, content: bytes) -> tuple[list[dict], list[dict]]:
+    if filename.endswith(".csv"):
+        reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+        source_headers = reader.fieldnames or []
+        rows = list(reader)
+    elif filename.endswith(".xlsx"):
+        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+        values = list(workbook.active.values)
+        source_headers = [str(value).strip() if value is not None else "" for value in values[0]] if values else []
+        rows = [dict(zip(source_headers, row)) for row in values[1:]]
+    else:
+        raise HTTPException(status_code=415, detail="Solo se admiten archivos .csv o .xlsx")
+    aliases = {"ref": "sku", "sku": "sku", "producto": "product_description", "descripción": "product_description", "descripcion": "product_description", "cant.": "quantity", "cantidad": "quantity", "unidades": "quantity", "precio": "unit_price", "precio unitario": "unit_price", "proveedor": "supplier_code", "supplier_code": "supplier_code", "external_order_id": "external_order_id"}
+    headers = {aliases.get(str(key).strip().lower(), str(key).strip()) for key in source_headers}
+    required = {"sku", "quantity", "unit_price", "supplier_code"}
+    errors = []
+    if not rows:
+        errors.append({"row": 1, "field": "headers", "message": "El archivo no contiene filas"})
+    for field in sorted(required - headers):
+        errors.append({"row": 1, "field": field, "message": f"Falta la columna obligatoria: {field}"})
+    normalized = []
+    for index, row in enumerate(rows, start=2):
+        mapped = {aliases.get(str(key).strip().lower(), str(key).strip()): value for key, value in row.items()}
+        if not any(value not in (None, "") for value in mapped.values()):
+            continue
+        mapped["_row"] = index
+        for field in ("sku", "supplier_code"):
+            if not mapped.get(field):
+                errors.append({"row": index, "field": field, "message": f"Campo obligatorio vacío: {field}"})
+        try:
+            mapped["quantity"] = float(mapped.get("quantity", 0))
+            if mapped["quantity"] <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            errors.append({"row": index, "field": "quantity", "message": "La cantidad debe ser numérica y mayor que cero"})
+        try:
+            mapped["unit_price"] = float(mapped.get("unit_price", 0))
+            if mapped["unit_price"] <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            errors.append({"row": index, "field": "unit_price", "message": "El precio debe ser numérico y mayor que cero"})
+        mapped.setdefault("supplier_code", "SALTOKI")
+        normalized.append(mapped)
+    return normalized, errors
     if "," in normalized and "." in normalized:
         normalized = normalized.replace(".", "").replace(",", ".")
     else:
@@ -291,35 +337,17 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
             raise HTTPException(status_code=422, detail=str(error)) from error
 
     @router.post("/imports/orders", tags=["imports"])
-    async def import_orders(file: UploadFile = File(...), current: WarehouseService = Depends(service)):
+    async def import_orders(file: UploadFile = File(...), confirm: bool = Form(False), current: WarehouseService = Depends(service)):
         filename = (file.filename or "").lower()
-        content = await file.read()
-        if filename.endswith(".csv"):
-            rows = list(csv.DictReader(io.StringIO(content.decode("utf-8-sig"))))
-        elif filename.endswith(".xlsx"):
-            workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-            sheet = workbook.active
-            values = list(sheet.values)
-            headers = [str(value).strip() if value is not None else "" for value in values[0]] if values else []
-            rows = [dict(zip(headers, row)) for row in values[1:]]
-        else:
-            raise HTTPException(status_code=415, detail="Solo se admiten archivos .csv o .xlsx")
-
-        aliases = {"ref": "sku", "sku": "sku", "producto": "product_description", "descripción": "product_description", "descripcion": "product_description", "cant.": "quantity", "cantidad": "quantity", "unidades": "quantity", "precio": "unit_price", "precio unitario": "unit_price", "proveedor": "supplier_code", "supplier_code": "supplier_code", "external_order_id": "external_order_id"}
-        normalized = []
-        for row in rows:
-            mapped = {}
-            for key, value in row.items():
-                mapped[aliases.get(str(key).strip().lower(), str(key).strip())] = value
-            if not mapped.get("sku") and not mapped.get("product_description"):
-                continue
-            if not mapped.get("sku") and mapped.get("product_description"):
-                raise HTTPException(status_code=422, detail="La plantilla necesita SKU para localizar el producto")
-            mapped["quantity"] = float(mapped.get("quantity", 0))
-            mapped["unit_price"] = float(mapped.get("unit_price", 0))
-            mapped.setdefault("supplier_code", "SALTOKI")
-            normalized.append(mapped)
-        return current.import_orders(normalized)
+        normalized, parse_errors = _parse_order_import(filename, await file.read())
+        preview = current.preview_import_orders(normalized)
+        errors = parse_errors + preview["errors"]
+        error_rows = {item["row"] for item in errors}
+        valid_rows = [row for row in normalized if row.get("_row") not in error_rows]
+        if not confirm:
+            return {"mode": "preview", "preview_count": len(normalized), "valid_count": len(valid_rows), "error_count": len(errors), "rows": normalized, "errors": errors}
+        result = current.import_orders(valid_rows)
+        return {"mode": "imported", "preview_count": len(normalized), **result, "errors": errors + result.get("errors", []), "error_count": len(errors) + result.get("error_count", 0)}
 
     @router.get("/stock", tags=["stock"])
     def stock(current: Annotated[WarehouseService, Depends(service)]):

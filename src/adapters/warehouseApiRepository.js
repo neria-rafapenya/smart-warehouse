@@ -70,7 +70,8 @@ function mapMovement(item) {
 
 export const warehouseRepository = {
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-  importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
+  previewOrderImport: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'false'); return send('/imports/orders', { method: 'POST', body: form }) },
+  importOrders: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'true'); return send('/imports/orders', { method: 'POST', body: form }) },
   uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
   reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
   exportInvoice: (invoiceNumber, targetSystem = 'corporate-accounting-rest') => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/accounting-export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_system: targetSystem }) }),

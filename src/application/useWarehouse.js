@@ -4,6 +4,7 @@ export const warehouseService = {
   loadAll: () => warehouseRepository.loadAll(),
   createOrder: payload => warehouseRepository.createOrder(payload),
   importOrders: file => warehouseRepository.importOrders(file),
+  previewOrderImport: file => warehouseRepository.previewOrderImport(file),
   uploadInvoice: file => warehouseRepository.uploadInvoice(file),
   reconcileInvoice: invoiceNumber => warehouseRepository.reconcileInvoice(invoiceNumber),
   exportInvoice: invoiceNumber => warehouseRepository.exportInvoice(invoiceNumber),

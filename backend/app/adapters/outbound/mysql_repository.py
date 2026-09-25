@@ -876,3 +876,26 @@ class MySQLWarehouseRepository:
             except Exception as error:
                 errors.append({"row": index, "message": str(error)})
         return {"imported": imported, "imported_count": len(imported), "errors": errors, "error_count": len(errors)}
+
+    def preview_import_orders(self, rows: list[dict]) -> dict:
+        external_ids = [row.get("external_order_id") for row in rows if row.get("external_order_id")]
+        existing = set()
+        if external_ids:
+            placeholders = ",".join(["%s"] * len(external_ids))
+            existing_rows = self._fetch_all(f"SELECT external_id FROM orders WHERE external_id IN ({placeholders})", tuple(external_ids))
+            existing = {row["external_id"] for row in existing_rows}
+        seen = set()
+        errors = []
+        valid_rows = []
+        for row in rows:
+            row_number = row.get("_row", "?")
+            external_id = row.get("external_order_id")
+            if external_id and external_id in existing:
+                errors.append({"row": row_number, "field": "external_order_id", "message": f"El pedido {external_id} ya existe en MySQL"})
+            elif external_id and external_id in seen:
+                errors.append({"row": row_number, "field": "external_order_id", "message": f"El pedido {external_id} está duplicado dentro del archivo"})
+            else:
+                if external_id:
+                    seen.add(external_id)
+                valid_rows.append(row)
+        return {"rows": rows, "valid_rows": valid_rows, "errors": errors, "error_count": len(errors), "preview_count": len(rows), "valid_count": len(valid_rows)}
