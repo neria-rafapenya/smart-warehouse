@@ -8,6 +8,7 @@ export const warehouseService = {
   reconcileInvoice: invoiceNumber => warehouseRepository.reconcileInvoice(invoiceNumber),
   exportInvoice: invoiceNumber => warehouseRepository.exportInvoice(invoiceNumber),
   downloadAccountingExport: format => warehouseRepository.downloadAccountingExport(format),
+  createStockMovement: payload => warehouseRepository.createStockMovement(payload),
   uploadProcedureDocument: (externalId, procedureCode, file) => warehouseRepository.uploadProcedureDocument(externalId, procedureCode, file),
   validateOrder: externalId => warehouseRepository.validateOrder(externalId),
 }

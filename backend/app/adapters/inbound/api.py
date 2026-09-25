@@ -59,6 +59,17 @@ class CreateReceiptRequest(BaseModel):
     lines: list[ReceiptLineRequest] = Field(min_length=1)
 
 
+class StockMovementRequest(BaseModel):
+    sku: str
+    movement_type: str = Field(pattern="^(entry|exit|reserve|release|adjustment)$")
+    quantity: float = Field(default=1, gt=0)
+    adjustment_quantity: float | None = None
+    warehouse_code: str = "MAD-01"
+    reference_type: str | None = None
+    reference_id: str | None = None
+    reason: str | None = None
+
+
 class AlertRuleRequest(BaseModel):
     code: str = Field(min_length=3, max_length=64)
     name: str = Field(min_length=3, max_length=160)
@@ -297,6 +308,17 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/stock", tags=["stock"])
     def stock(current: Annotated[WarehouseService, Depends(service)]):
         return current.stock()
+
+    @router.get("/stock/movements", tags=["stock"])
+    def stock_movements(current: Annotated[WarehouseService, Depends(service)], sku: str | None = None, limit: int = Query(default=100, ge=1, le=500)):
+        return current.stock_movements(sku=sku, limit=limit)
+
+    @router.post("/stock/movements", status_code=201, tags=["stock"])
+    def create_stock_movement(request: StockMovementRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.create_stock_movement(request.model_dump())
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @router.get("/suppliers", tags=["suppliers"])
     def suppliers(current: Annotated[WarehouseService, Depends(service)]):

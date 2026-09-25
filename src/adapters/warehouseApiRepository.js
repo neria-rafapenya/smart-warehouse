@@ -62,6 +62,12 @@ function mapReceipt(item) {
   return { ...item, name: item.dock_code, supplier: item.supplier || 'Libre', eta: dateLabel(item.expected_at), status, tone: item.receipt_result === 'discrepancy' ? 'danger' : tone, order: item.external_id, product: item.product, qty: Number(item.expected_quantity || 0), received: Number(item.received_quantity || 0), damaged: Number(item.damaged_quantity || 0), resultStatus }
 }
 
+function mapMovement(item) {
+  const labels = { entry: 'Entrada', exit: 'Salida', reserve: 'Reserva', release: 'Liberación', adjustment: 'Ajuste' }
+  const delta = Number(item.quantity_delta || 0)
+  return { ...item, movementLabel: labels[item.movement_type] || item.movement_type, quantityLabel: `${delta > 0 ? '+' : ''}${delta}`, reservedLabel: `${Number(item.reserved_delta || 0) > 0 ? '+' : ''}${Number(item.reserved_delta || 0)}` }
+}
+
 export const warehouseRepository = {
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
@@ -79,9 +85,10 @@ export const warehouseRepository = {
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   createReceipt: payload => send('/receipts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  createStockMovement: payload => send('/stock/movements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   async loadAll() {
-    const [dashboard, orders, stock, suppliers, invoices, procedures, events, alerts, receipts, alertRules] = await Promise.all([
-      get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'),
+    const [dashboard, orders, stock, movements, suppliers, invoices, procedures, events, alerts, receipts, alertRules] = await Promise.all([
+      get('/dashboard'), get('/orders'), get('/stock'), get('/stock/movements?limit=100'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'),
     ])
     const pending = Number(dashboard.orders_pending || 0)
     const lowStock = (stock || []).filter(item => item.status === 'replenish').length
@@ -92,7 +99,7 @@ export const warehouseRepository = {
         { label: 'Alertas activas', value: String(lowStock), change: 'stock bajo', tone: 'danger', icon: 'bi-bell' },
         { label: 'Referencias activas', value: String(dashboard.stock_items || 0), change: 'datos MySQL', tone: 'info', icon: 'bi-box-seam' },
       ],
-      orders: orders.map(mapOrder), stock: stock.map(mapStock), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), alertRules: alertRules.map(mapAlertRule), receipts: receipts.map(mapReceipt),
+      orders: orders.map(mapOrder), stock: stock.map(mapStock), movements: movements.map(mapMovement), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), alertRules: alertRules.map(mapAlertRule), receipts: receipts.map(mapReceipt),
     }
   },
 }

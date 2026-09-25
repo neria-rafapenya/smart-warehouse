@@ -104,6 +104,77 @@ class MySQLWarehouseRepository:
             """
         )
 
+    def list_stock_movements(self, sku: str | None = None, limit: int = 100) -> Sequence[dict]:
+        safe_limit = max(1, min(limit, 500))
+        params: tuple[Any, ...] = ()
+        where = ""
+        if sku:
+            where = "WHERE p.sku = %s"
+            params = (sku,)
+        return self._fetch_all(
+            f"""SELECT sm.id, sm.movement_type, sm.quantity_delta, sm.reserved_delta,
+                       sm.resulting_quantity, sm.resulting_reserved_quantity,
+                       sm.reference_type, sm.reference_id, sm.reason, sm.created_at,
+                       p.sku, p.description AS product, w.code AS warehouse_code,
+                       u.full_name AS created_by
+                FROM stock_movements sm
+                JOIN products p ON p.id = sm.product_id
+                JOIN warehouses w ON w.id = sm.warehouse_id
+                LEFT JOIN users u ON u.id = sm.created_by
+                {where}
+                ORDER BY sm.created_at DESC LIMIT {safe_limit}""",
+            params,
+        )
+
+    def create_stock_movement(self, payload: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """SELECT si.id AS stock_id, si.warehouse_id, si.quantity, si.reserved_quantity,
+                          si.minimum_quantity, p.id AS product_id, p.sku, p.description
+                   FROM stock_items si JOIN products p ON p.id = si.product_id
+                   JOIN warehouses w ON w.id = si.warehouse_id
+                   WHERE p.sku = %s AND w.code = %s LIMIT 1 FOR UPDATE""",
+                (payload["sku"], payload.get("warehouse_code", "MAD-01")),
+            )
+            stock = cursor.fetchone()
+            if not stock:
+                raise ValueError(f"SKU no encontrado en el almacén: {payload['sku']}")
+            movement_type = payload["movement_type"]
+            amount = float(payload["quantity"])
+            if amount <= 0 and movement_type != "adjustment":
+                raise ValueError("La cantidad debe ser mayor que cero")
+            quantity_delta = amount if movement_type == "entry" else -amount if movement_type == "exit" else float(payload.get("adjustment_quantity", 0)) if movement_type == "adjustment" else 0
+            reserved_delta = amount if movement_type == "reserve" else -amount if movement_type == "release" else 0
+            current_quantity = float(stock["quantity"])
+            current_reserved = float(stock["reserved_quantity"])
+            resulting_quantity = current_quantity + quantity_delta
+            resulting_reserved = current_reserved + reserved_delta
+            if resulting_quantity < 0:
+                raise ValueError("La salida supera el stock disponible")
+            if resulting_reserved < 0 or resulting_reserved > resulting_quantity:
+                raise ValueError("La reserva no puede superar el stock disponible")
+            cursor.execute("UPDATE stock_items SET quantity = %s, reserved_quantity = %s WHERE id = %s", (resulting_quantity, resulting_reserved, stock["stock_id"]))
+            cursor.execute(
+                """INSERT INTO stock_movements (warehouse_id, product_id, movement_type, quantity_delta, reserved_delta, resulting_quantity, resulting_reserved_quantity, reference_type, reference_id, reason, created_by)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
+                (stock["warehouse_id"], stock["product_id"], movement_type, quantity_delta, reserved_delta, resulting_quantity, resulting_reserved, payload.get("reference_type"), payload.get("reference_id"), payload.get("reason")),
+            )
+            movement_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('stock.movement', 'info', 'product', %s, 'user', %s)",
+                (stock["sku"], json.dumps({"movement_id": movement_id, "movement_type": movement_type, "quantity_delta": quantity_delta, "reserved_delta": reserved_delta, "resulting_quantity": resulting_quantity, "resulting_reserved_quantity": resulting_reserved}, ensure_ascii=False)),
+            )
+            connection.commit()
+            return {"id": movement_id, "sku": stock["sku"], "product": stock["description"], "movement_type": movement_type, "quantity_delta": quantity_delta, "reserved_delta": reserved_delta, "resulting_quantity": resulting_quantity, "resulting_reserved_quantity": resulting_reserved, "status": "recorded"}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
     def list_suppliers(self) -> Sequence[dict]:
         return self._fetch_all(
             """

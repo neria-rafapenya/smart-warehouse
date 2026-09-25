@@ -45,6 +45,12 @@ class WarehouseService:
     def stock(self) -> list[dict]:
         return list(self.repository.list_stock())
 
+    def stock_movements(self, sku: str | None = None, limit: int = 100) -> list[dict]:
+        return list(self.repository.list_stock_movements(sku=sku, limit=limit))
+
+    def create_stock_movement(self, payload: dict) -> dict:
+        return self.repository.create_stock_movement(payload)
+
     def suppliers(self) -> list[dict]:
         return list(self.repository.list_suppliers())
 
