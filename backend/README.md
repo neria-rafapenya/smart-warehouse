@@ -33,6 +33,7 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/004_invoice_reconciliation.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/005_accounting_exports.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/006_alert_management.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/007_real_receipts.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -70,6 +71,8 @@ Endpoints iniciales:
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
 - `GET /api/v1/events?limit=50&severity=warning&event_type=ai.validation&aggregate_type=order` — registro filtrable.
 - `GET /api/v1/events/{id}` — detalle con payload completo.
+- `GET /api/v1/receipts`
+- `POST /api/v1/receipts` — registra entrada, cantidades recibidas, daños y diferencias contra el pedido.
 - `GET /api/v1/events/export?format=csv|xlsx` — exporta el registro normalizado con payload.
 - `GET /api/v1/alerts?limit=50&severity=warning&event_type=ai.validation&status=unread` — alertas filtrables desde `notifications` y `audit_events`.
 - `POST /api/v1/alerts/{id}/read` y `POST /api/v1/alerts/read-all` — marcan alertas como leídas.
@@ -93,6 +96,10 @@ La tabla `invoice_accounting_exports` controla el ciclo `pending → exportable 
 ## Gestión de alertas
 
 La tabla `alert_rules` persiste reglas activas, tipo de evento, gravedad, canales y destinatarios. Las notificaciones pueden filtrarse por gravedad y tipo, marcarse individualmente o en bloque como leídas y quedan auditadas sin eliminar el histórico.
+
+## Recepciones reales
+
+`POST /api/v1/receipts` registra una recepción contra un pedido y sus SKU. Para cada línea compara la cantidad solicitada con la recibida y la dañada. Las diferencias actualizan el estado de la recepción a `discrepancy`, generan un evento `receipt.registered` y crean una alerta para revisión; las entradas completas quedan como `received`.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

@@ -48,7 +48,7 @@ class MySQLWarehouseRepository:
         query = """
             SELECT o.external_id, o.status, o.risk, o.currency, o.total,
                    o.requested_at, u.full_name AS requester,
-                   s.legal_name AS supplier, p.description AS product,
+                   s.legal_name AS supplier, p.sku, p.description AS product,
                    ol.requested_quantity, ol.unit_price,
                    COALESCE(si.quantity, 0) AS available_stock,
                    COALESCE(si.minimum_quantity, 0) AS minimum_stock
@@ -71,7 +71,7 @@ class MySQLWarehouseRepository:
             """
             SELECT o.external_id, o.status, o.risk, o.currency, o.total,
                    o.requested_at, u.full_name AS requester,
-                   s.legal_name AS supplier, p.description AS product,
+                   s.legal_name AS supplier, p.sku, p.description AS product,
                    ol.requested_quantity, ol.unit_price,
                    COALESCE(si.quantity, 0) AS available_stock,
                    COALESCE(si.minimum_quantity, 0) AS minimum_stock,
@@ -471,15 +471,87 @@ class MySQLWarehouseRepository:
             """
             SELECT gr.receipt_number, gr.dock_code, gr.status, gr.expected_at,
                    o.external_id, s.legal_name AS supplier, p.description AS product,
-                   ol.requested_quantity AS quantity
+                   COALESCE(grl.expected_quantity, ol.requested_quantity) AS expected_quantity,
+                   COALESCE(grl.received_quantity, 0) AS received_quantity,
+                   COALESCE(grl.damaged_quantity, 0) AS damaged_quantity,
+                   grl.damage_reason,
+                   CASE WHEN grl.id IS NULL THEN 'pending' WHEN grl.damaged_quantity > 0 OR grl.received_quantity <> grl.expected_quantity THEN 'discrepancy' ELSE 'complete' END AS receipt_result
             FROM goods_receipts gr
             LEFT JOIN orders o ON o.id = gr.order_id
             LEFT JOIN suppliers s ON s.id = o.supplier_id
             LEFT JOIN order_lines ol ON ol.order_id = o.id
             LEFT JOIN products p ON p.id = ol.product_id
+            LEFT JOIN goods_receipt_lines grl ON grl.receipt_id = gr.id AND grl.product_id = ol.product_id
             ORDER BY gr.expected_at
             """
         )
+
+    def create_receipt(self, payload: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """SELECT o.id, o.external_id, o.warehouse_id, s.legal_name AS supplier
+                   FROM orders o LEFT JOIN suppliers s ON s.id = o.supplier_id
+                   WHERE o.external_id = %s LIMIT 1""",
+                (payload["order_external_id"],),
+            )
+            order = cursor.fetchone()
+            if not order:
+                raise ValueError(f"Pedido no encontrado: {payload['order_external_id']}")
+            receipt_number = payload.get("receipt_number") or f"REC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            cursor.execute(
+                """INSERT INTO goods_receipts (receipt_number, order_id, warehouse_id, dock_code, status, expected_at, received_at)
+                   VALUES (%s, %s, %s, %s, %s, NOW(), COALESCE(%s, NOW()))""",
+                (receipt_number, order["id"], order["warehouse_id"], payload.get("dock_code"), "received", payload.get("received_at")),
+            )
+            receipt_id = cursor.lastrowid
+            results = []
+            has_discrepancy = False
+            for line in payload["lines"]:
+                cursor.execute(
+                    """SELECT p.id AS product_id, p.sku, ol.requested_quantity
+                       FROM products p JOIN order_lines ol ON ol.product_id = p.id
+                       WHERE p.sku = %s AND ol.order_id = %s LIMIT 1""",
+                    (line["sku"], order["id"]),
+                )
+                expected = cursor.fetchone()
+                if not expected:
+                    raise ValueError(f"SKU {line['sku']} no pertenece al pedido {order['external_id']}")
+                received = float(line.get("received_quantity", 0))
+                damaged = float(line.get("damaged_quantity", 0))
+                requested = float(expected["requested_quantity"])
+                if received < 0 or damaged < 0 or received + damaged > requested:
+                    raise ValueError(f"Cantidad inválida para {line['sku']}: recibida + dañada supera la solicitada")
+                discrepancy = abs((received + damaged) - requested) > 0.001 or damaged > 0
+                has_discrepancy = has_discrepancy or discrepancy
+                cursor.execute(
+                    """INSERT INTO goods_receipt_lines (receipt_id, product_id, expected_quantity, received_quantity, damaged_quantity, damage_reason)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (receipt_id, expected["product_id"], requested, received, damaged, line.get("damage_reason")),
+                )
+                results.append({"sku": line["sku"], "requested_quantity": requested, "received_quantity": received, "damaged_quantity": damaged, "discrepancy": discrepancy, "damage_reason": line.get("damage_reason")})
+            status = "discrepancy" if has_discrepancy else "received"
+            cursor.execute("UPDATE goods_receipts SET status = %s WHERE id = %s", (status, receipt_id))
+            severity = "warning" if has_discrepancy else "info"
+            payload_json = {"receipt_number": receipt_number, "order": order["external_id"], "lines": results}
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('receipt.registered', %s, 'receipt', %s, 'system', %s)",
+                (severity, receipt_number, json.dumps(payload_json, ensure_ascii=False)),
+            )
+            if has_discrepancy:
+                cursor.execute(
+                    "INSERT INTO notifications (event_id, channel, status, title, body) VALUES (%s, 'in_app', 'pending', %s, %s)",
+                    (cursor.lastrowid, "Diferencia en recepción", f"{receipt_number}: existen cantidades dañadas o diferencias frente al pedido {order['external_id']}.")
+                )
+            connection.commit()
+            return {"receipt_number": receipt_number, "order": order["external_id"], "supplier": order["supplier"], "status": status, "has_discrepancy": has_discrepancy, "lines": results}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
 
     def list_events(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, aggregate_type: str | None = None) -> Sequence[dict]:
         safe_limit = max(1, min(limit, 200))

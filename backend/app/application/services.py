@@ -72,6 +72,9 @@ class WarehouseService:
     def receipts(self) -> list[dict]:
         return list(self.repository.list_receipts())
 
+    def create_receipt(self, payload: dict) -> dict:
+        return self.repository.create_receipt(payload)
+
     def events(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, aggregate_type: str | None = None) -> list[dict]:
         return list(self.repository.list_events(limit=limit, severity=severity, event_type=event_type, aggregate_type=aggregate_type))
 

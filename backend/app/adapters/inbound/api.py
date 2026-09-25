@@ -44,6 +44,21 @@ class AccountingExportRequest(BaseModel):
     target_system: str = "corporate-accounting-rest"
 
 
+class ReceiptLineRequest(BaseModel):
+    sku: str = Field(min_length=1)
+    received_quantity: float = Field(ge=0)
+    damaged_quantity: float = Field(default=0, ge=0)
+    damage_reason: str | None = None
+
+
+class CreateReceiptRequest(BaseModel):
+    order_external_id: str
+    receipt_number: str | None = None
+    dock_code: str | None = None
+    received_at: str | None = None
+    lines: list[ReceiptLineRequest] = Field(min_length=1)
+
+
 class AlertRuleRequest(BaseModel):
     code: str = Field(min_length=3, max_length=64)
     name: str = Field(min_length=3, max_length=160)
@@ -346,6 +361,13 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/receipts", tags=["receiving"])
     def receipts(current: Annotated[WarehouseService, Depends(service)]):
         return current.receipts()
+
+    @router.post("/receipts", status_code=201, tags=["receiving"])
+    def create_receipt(request: CreateReceiptRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.create_receipt(request.model_dump())
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @router.get("/events", tags=["events"])
     def events(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200), severity: str | None = Query(default=None, pattern="^(info|warning|critical)$"), event_type: str | None = None, aggregate_type: str | None = None):

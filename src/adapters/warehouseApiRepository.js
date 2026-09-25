@@ -58,7 +58,8 @@ function mapAlertRule(item) {
 function mapReceipt(item) {
   const status = item.status === 'unloading' ? 'Descargando' : item.status === 'in_transit' ? 'En camino' : item.status === 'available' ? 'Disponible' : 'Programado'
   const tone = item.status === 'unloading' ? 'success' : item.status === 'in_transit' ? 'info' : item.status === 'available' ? 'neutral' : 'warning'
-  return { ...item, name: item.dock_code, supplier: item.supplier || 'Libre', eta: dateLabel(item.expected_at), status, tone, order: item.external_id, product: item.product, qty: Number(item.quantity || 0) }
+  const resultStatus = item.receipt_result === 'complete' ? 'Completa' : item.receipt_result === 'discrepancy' ? 'Con diferencias' : 'Pendiente'
+  return { ...item, name: item.dock_code, supplier: item.supplier || 'Libre', eta: dateLabel(item.expected_at), status, tone: item.receipt_result === 'discrepancy' ? 'danger' : tone, order: item.external_id, product: item.product, qty: Number(item.expected_quantity || 0), received: Number(item.received_quantity || 0), damaged: Number(item.damaged_quantity || 0), resultStatus }
 }
 
 export const warehouseRepository = {
@@ -77,6 +78,7 @@ export const warehouseRepository = {
   updateAlertRule: (ruleId, payload) => send(`/alert-rules/${ruleId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
+  createReceipt: payload => send('/receipts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   async loadAll() {
     const [dashboard, orders, stock, suppliers, invoices, procedures, events, alerts, receipts, alertRules] = await Promise.all([
       get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'),
