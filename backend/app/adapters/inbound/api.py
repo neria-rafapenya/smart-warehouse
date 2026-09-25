@@ -1,7 +1,11 @@
 import csv
 import io
 import re
+import shutil
+import subprocess
+import tempfile
 from typing import Annotated, Callable
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from openpyxl import load_workbook
@@ -48,13 +52,48 @@ def _amount(value: str) -> float | None:
         return None
 
 
+def _ocr_pdf(content: bytes) -> tuple[str, dict]:
+    pdftoppm = shutil.which("pdftoppm")
+    tesseract = shutil.which("tesseract")
+    metadata = {"ocr_attempted": True, "ocr_available": bool(pdftoppm and tesseract), "ocr_pages": 0}
+    if not pdftoppm or not tesseract:
+        metadata["ocr_reason"] = "OCR no disponible: se necesita pdftoppm y tesseract"
+        return "", metadata
+    with tempfile.TemporaryDirectory(prefix="smart-warehouse-ocr-") as directory:
+        pdf_path = Path(directory) / "invoice.pdf"
+        prefix = Path(directory) / "page"
+        pdf_path.write_bytes(content)
+        try:
+            subprocess.run([pdftoppm, "-png", "-r", "200", str(pdf_path), str(prefix)], check=True, capture_output=True, timeout=60)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            metadata["ocr_reason"] = f"No se pudo rasterizar el PDF: {error}"
+            return "", metadata
+        pages = sorted(Path(directory).glob("page-*.png"))
+        metadata["ocr_pages"] = len(pages)
+        text_parts = []
+        for page in pages:
+            try:
+                result = subprocess.run([tesseract, str(page), "stdout", "-l", "spa+eng", "--psm", "6"], check=True, capture_output=True, text=True, timeout=60)
+                text_parts.append(result.stdout)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                continue
+        text = "\n".join(text_parts).strip()
+        if not text:
+            metadata["ocr_reason"] = "OCR ejecutado pero no detectó texto legible"
+        return text, metadata
+
+
 def _extract_invoice(content: bytes) -> dict:
     try:
         reader = PdfReader(io.BytesIO(content))
-        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
     except Exception as error:
         raise HTTPException(status_code=422, detail=f"No se pudo leer el PDF: {error}") from error
 
+    extraction_source = "digital" if text else "ocr"
+    ocr_metadata = {"ocr_attempted": False, "ocr_available": False, "ocr_pages": 0}
+    if not text:
+        text, ocr_metadata = _ocr_pdf(content)
     invoice_match = re.search(r"(?:factura|invoice)\s*(?:n[ºo°.]?|number|no\.?)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9/_-]+)", text, re.IGNORECASE)
     date_match = re.search(r"(?:fecha|date)\s*[:#-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text, re.IGNORECASE)
     tax_id_match = re.search(r"\b([A-Z]\d{8}|\d{8}[A-Z])\b", text.upper())
@@ -65,7 +104,8 @@ def _extract_invoice(content: bytes) -> dict:
     if date_match:
         day, month, year = re.split(r"[/-]", date_match.group(1))
         invoice_date = f"{int(year):04d}-{int(month):02d}-{int(day):02d}" if len(year) == 4 else f"20{int(year):02d}-{int(month):02d}-{int(day):02d}"
-    extracted = {
+    required = ("supplier_tax_id", "invoice_number", "invoice_date", "total")
+    values = {
         "supplier_tax_id": tax_id_match.group(1) if tax_id_match else None,
         "invoice_number": invoice_match.group(1).upper() if invoice_match else None,
         "invoice_date": invoice_date,
@@ -76,10 +116,18 @@ def _extract_invoice(content: bytes) -> dict:
         "pages": len(reader.pages),
         "text_detected": bool(text.strip()),
     }
-    required = ("supplier_tax_id", "invoice_number", "invoice_date", "total")
-    complete = bool(text.strip()) and all(extracted.get(field) not in (None, "") for field in required)
-    extracted["extraction_status"] = "extracted" if complete else "needs_review"
-    extracted["confidence"] = 0.96 if complete else (0.45 if text.strip() else 0.0)
+    base_confidence = 0.78 if extraction_source == "ocr" else 0.96
+    low_confidence_fields = [field for field in required if values.get(field) in (None, "")]
+    field_confidence = {field: 0.0 if values.get(field) in (None, "") else base_confidence for field in required}
+    complete = bool(text.strip()) and not low_confidence_fields
+    review_reasons = []
+    if extraction_source == "ocr":
+        review_reasons.append("Datos obtenidos mediante OCR; requieren revisión humana")
+    if low_confidence_fields:
+        review_reasons.append(f"Campos no identificados: {', '.join(low_confidence_fields)}")
+    extracted = {**values, **ocr_metadata, "extraction_source": extraction_source, "field_confidence": field_confidence, "low_confidence_fields": low_confidence_fields, "review_reasons": review_reasons}
+    extracted["extraction_status"] = "extracted" if complete and extraction_source == "digital" else "needs_review"
+    extracted["confidence"] = base_confidence if complete else (0.45 if text.strip() and extraction_source == "digital" else 0.35 if text.strip() else 0.0)
     return extracted
 
 

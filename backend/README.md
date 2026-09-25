@@ -68,7 +68,9 @@ Endpoints iniciales:
 
 ## Facturas PDF y documentos obligatorios
 
-Las facturas digitales se procesan con `pypdf`. Se extraen de forma determinista el proveedor mediante NIF, número, fecha, moneda, subtotal, impuestos y total. Si el PDF es un escaneo sin capa de texto, o faltan campos clave, queda en estado `pending_review`, se registra un evento y se genera una notificación interna.
+Las facturas digitales se procesan con `pypdf`. Se extraen de forma determinista el proveedor mediante NIF, número, fecha, moneda, subtotal, impuestos y total. Si el PDF no contiene una capa de texto, la API detecta el caso, rasteriza sus páginas con `pdftoppm` y ejecuta OCR con Tesseract (`spa+eng`). Los campos obtenidos por OCR tienen confianza reducida y el documento queda siempre en `pending_review`, aunque se hayan encontrado todos los campos, para que una persona valide el resultado.
+
+El resultado conserva trazabilidad en `documents.extracted_json`: origen de extracción (`digital` u `ocr`), confianza por campo, campos con baja confianza, razones de revisión y metadatos del OCR. Si las herramientas OCR no están instaladas, la factura no se pierde: queda pendiente de revisión con una razón explícita. En local se necesitan Tesseract y Poppler (`pdftoppm`); su empaquetado para Docker/AWS se resolverá en la Fase 3.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

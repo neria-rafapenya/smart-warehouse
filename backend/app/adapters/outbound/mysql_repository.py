@@ -203,7 +203,7 @@ class MySQLWarehouseRepository:
                     (event_id, "Factura requiere revisión", f"{filename}: faltan datos fiables o no se ha identificado el proveedor."),
                 )
             connection.commit()
-            return {"invoice_number": invoice_number, "filename": filename, "status": "exportable" if severity == "info" else "pending_review", "confidence": extracted.get("confidence"), "storage_key": storage_key}
+            return {"invoice_number": invoice_number, "filename": filename, "status": "exportable" if severity == "info" else "pending_review", "confidence": extracted.get("confidence"), "storage_key": storage_key, "extraction_source": extracted.get("extraction_source"), "ocr_applied": extracted.get("ocr_attempted", False), "low_confidence_fields": extracted.get("low_confidence_fields", []), "review_reasons": extracted.get("review_reasons", [])}
         except Exception:
             connection.rollback()
             if target.exists():
