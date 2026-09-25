@@ -5,5 +5,6 @@ export const warehouseService = {
   createOrder: payload => warehouseRepository.createOrder(payload),
   importOrders: file => warehouseRepository.importOrders(file),
   uploadInvoice: file => warehouseRepository.uploadInvoice(file),
+  uploadProcedureDocument: (externalId, procedureCode, file) => warehouseRepository.uploadProcedureDocument(externalId, procedureCode, file),
   validateOrder: externalId => warehouseRepository.validateOrder(externalId),
 }

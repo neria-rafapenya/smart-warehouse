@@ -56,6 +56,7 @@ export const warehouseRepository = {
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
   uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
+  uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   async loadAll() {
     const [dashboard, orders, stock, suppliers, invoices, procedures, events, alerts, receipts] = await Promise.all([
