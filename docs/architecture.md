@@ -6,7 +6,7 @@ React/Vite presenta pantallas y navegación. `domain/mockData.js` contiene el es
 
 ## Fase 2
 
-Los casos de uso viven en `backend/app/application` y solo conocen puertos. Los adaptadores futuros pueden persistir en MySQL, leer Excel/CSV según la plantilla versionada, almacenar PDFs y exponer REST. La salida económica se mantiene como evento/DTO exportable a contabilidad.
+Los casos de uso viven en `backend/app/application` y solo conocen puertos. FastAPI será la única puerta de acceso del frontend a los datos: React consumirá contratos REST mediante un adaptador HTTP, mientras que FastAPI resolverá casos de uso y repositorios MySQL. Los adaptadores futuros pueden leer Excel/CSV según la plantilla versionada, almacenar PDFs y exponer REST. La salida económica se mantiene como evento/DTO exportable a contabilidad.
 
 ## Fase 3
 
