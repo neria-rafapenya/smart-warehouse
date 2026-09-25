@@ -68,7 +68,9 @@ Endpoints iniciales:
 - `GET /api/v1/documents/procedures` — resumen de procedimientos obligatorios pendientes.
 - `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
-- `GET /api/v1/events?limit=50`
+- `GET /api/v1/events?limit=50&severity=warning&event_type=ai.validation&aggregate_type=order` — registro filtrable.
+- `GET /api/v1/events/{id}` — detalle con payload completo.
+- `GET /api/v1/events/export?format=csv|xlsx` — exporta el registro normalizado con payload.
 - `GET /api/v1/alerts?limit=50&severity=warning&event_type=ai.validation&status=unread` — alertas filtrables desde `notifications` y `audit_events`.
 - `POST /api/v1/alerts/{id}/read` y `POST /api/v1/alerts/read-all` — marcan alertas como leídas.
 - `GET/POST/PATCH /api/v1/alert-rules` — consulta y configura reglas, gravedad, canales y destinatarios.

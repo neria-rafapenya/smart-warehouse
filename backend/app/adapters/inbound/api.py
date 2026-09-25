@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import re
 import shutil
 import subprocess
@@ -97,6 +98,32 @@ def _accounting_file(rows: list[dict], export_format: str) -> tuple[bytes, str, 
     stream = io.BytesIO()
     workbook.save(stream)
     return stream.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "smart-warehouse-accounting.xlsx"
+
+
+def _events_file(rows: list[dict], export_format: str) -> tuple[bytes, str, str]:
+    columns = ["id", "created_at", "event_type", "severity", "aggregate_type", "aggregate_id", "actor_type", "actor_id", "payload"]
+    normalized = []
+    for row in rows:
+        item = dict(row)
+        payload = item.get("payload")
+        item["payload"] = json.dumps(payload, ensure_ascii=False) if isinstance(payload, (dict, list)) else payload
+        normalized.append(item)
+    if export_format == "csv":
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=columns, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(normalized)
+        return output.getvalue().encode("utf-8-sig"), "text/csv; charset=utf-8", "smart-warehouse-events.csv"
+    from openpyxl import Workbook
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Eventos"
+    sheet.append(columns)
+    for row in normalized:
+        sheet.append([row.get(column) for column in columns])
+    stream = io.BytesIO()
+    workbook.save(stream)
+    return stream.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "smart-warehouse-events.xlsx"
 
 
 def _ocr_pdf(content: bytes) -> tuple[str, dict]:
@@ -321,8 +348,20 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         return current.receipts()
 
     @router.get("/events", tags=["events"])
-    def events(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200)):
-        return current.events(limit=limit)
+    def events(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200), severity: str | None = Query(default=None, pattern="^(info|warning|critical)$"), event_type: str | None = None, aggregate_type: str | None = None):
+        return current.events(limit=limit, severity=severity, event_type=event_type, aggregate_type=aggregate_type)
+
+    @router.get("/events/export", tags=["events"])
+    def export_events(format: str = Query(default="csv", pattern="^(csv|xlsx)$"), severity: str | None = Query(default=None, pattern="^(info|warning|critical)$"), event_type: str | None = None, aggregate_type: str | None = None, current: WarehouseService = Depends(service)):
+        payload, media_type, filename = _events_file(current.events(limit=200, severity=severity, event_type=event_type, aggregate_type=aggregate_type), format)
+        return StreamingResponse(io.BytesIO(payload), media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+    @router.get("/events/{event_id}", tags=["events"])
+    def event_detail(event_id: int, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.event(event_id)
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
 
     @router.get("/alerts", tags=["events"])
     def alerts(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200), severity: str | None = Query(default=None, pattern="^(info|warning|critical)$"), event_type: str | None = None, status: str = Query(default="unread", pattern="^(unread|read|all)$")):

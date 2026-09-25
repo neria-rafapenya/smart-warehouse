@@ -72,8 +72,14 @@ class WarehouseService:
     def receipts(self) -> list[dict]:
         return list(self.repository.list_receipts())
 
-    def events(self, limit: int = 50) -> list[dict]:
-        return list(self.repository.list_events(limit=limit))
+    def events(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, aggregate_type: str | None = None) -> list[dict]:
+        return list(self.repository.list_events(limit=limit, severity=severity, event_type=event_type, aggregate_type=aggregate_type))
+
+    def event(self, event_id: int) -> dict:
+        result = self.repository.get_event(event_id)
+        if result is None:
+            raise ValueError(f"Evento no encontrado: {event_id}")
+        return result
 
     def alerts(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, status: str = "unread") -> list[dict]:
         return list(self.repository.list_alerts(limit=limit, severity=severity, event_type=event_type, status=status))

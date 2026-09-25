@@ -481,13 +481,30 @@ class MySQLWarehouseRepository:
             """
         )
 
-    def list_events(self, limit: int = 50) -> Sequence[dict]:
+    def list_events(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, aggregate_type: str | None = None) -> Sequence[dict]:
         safe_limit = max(1, min(limit, 200))
+        clauses = []
+        params: list[Any] = []
+        for column, value in (("severity", severity), ("event_type", event_type), ("aggregate_type", aggregate_type)):
+            if value:
+                clauses.append(f"{column} = %s")
+                params.append(value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         return self._fetch_all(
             f"""SELECT id, event_type, severity, aggregate_type, aggregate_id,
                        actor_type, payload, created_at
-                FROM audit_events ORDER BY created_at DESC LIMIT {safe_limit}"""
+                FROM audit_events {where} ORDER BY created_at DESC LIMIT {safe_limit}""",
+            tuple(params),
         )
+
+    def get_event(self, event_id: int) -> dict | None:
+        rows = self._fetch_all(
+            """SELECT id, event_type, severity, aggregate_type, aggregate_id,
+                      actor_type, actor_id, payload, created_at
+               FROM audit_events WHERE id = %s LIMIT 1""",
+            (event_id,),
+        )
+        return rows[0] if rows else None
 
     def list_alerts(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, status: str = "unread") -> Sequence[dict]:
         safe_limit = max(1, min(limit, 200))

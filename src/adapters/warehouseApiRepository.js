@@ -41,7 +41,9 @@ function mapProcedure(item) {
 
 function mapEvent(item) {
   const tone = item.severity === 'critical' ? 'danger' : item.severity === 'warning' ? 'warning' : 'info'
-  return { ...item, time: dateLabel(item.created_at), type: item.event_type, text: `${item.event_type} procesado`, detail: `Evento ${item.aggregate_id || item.id} registrado`, tone }
+  let payload = item.payload
+  if (typeof payload === 'string') { try { payload = JSON.parse(payload) } catch { payload = { raw: payload } } }
+  return { ...item, payload: payload || {}, time: dateLabel(item.created_at), type: item.event_type, text: `${item.event_type} procesado`, detail: `Evento ${item.aggregate_id || item.id} registrado`, tone }
 }
 
 function mapAlert(item) {
@@ -66,6 +68,8 @@ export const warehouseRepository = {
   reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
   exportInvoice: (invoiceNumber, targetSystem = 'corporate-accounting-rest') => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/accounting-export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_system: targetSystem }) }),
   downloadAccountingExport: async format => { const response = await fetch(`${API_BASE_URL}/documents/invoices/accounting-export?format=${format}`); if (!response.ok) throw new Error(`API ${response.status}: exportación contable`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-accounting.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
+  downloadEventsExport: async (format, filters = {}) => { const query = new URLSearchParams({ format, ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value && value !== 'all')) }); const response = await fetch(`${API_BASE_URL}/events/export?${query}`); if (!response.ok) throw new Error(`API ${response.status}: exportación de eventos`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-events.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
+  getEvent: eventId => get(`/events/${eventId}`),
   readAlert: alertId => send(`/alerts/${alertId}/read`, { method: 'POST' }),
   readAllAlerts: () => send('/alerts/read-all', { method: 'POST' }),
   listAlertRules: () => get('/alert-rules'),
