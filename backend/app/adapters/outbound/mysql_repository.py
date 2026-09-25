@@ -276,11 +276,35 @@ class MySQLWarehouseRepository:
                 FROM audit_events ORDER BY created_at DESC LIMIT {safe_limit}"""
         )
 
+    def list_alerts(self, limit: int = 50) -> Sequence[dict]:
+        safe_limit = max(1, min(limit, 200))
+        return self._fetch_all(
+            f"""SELECT n.id, n.title, n.body, n.status, n.channel, n.created_at,
+                       e.event_type, e.severity, e.aggregate_type, e.aggregate_id
+                FROM notifications n
+                LEFT JOIN audit_events e ON e.id = n.event_id
+                WHERE n.status IN ('pending', 'unread')
+                ORDER BY n.created_at DESC LIMIT {safe_limit}"""
+        )
+
+    def list_decisions(self, external_id: str) -> Sequence[dict]:
+        return self._fetch_all(
+            """
+            SELECT vd.id, o.external_id, vd.decision_status, vd.risk,
+                   vd.confidence, vd.reasons, vd.created_at
+            FROM validation_decisions vd
+            JOIN orders o ON o.id = vd.order_id
+            WHERE o.external_id = %s
+            ORDER BY vd.created_at DESC
+            """,
+            (external_id,),
+        )
+
     def save_validation(self, external_id: str, decision: dict) -> None:
         connection = self._connect()
         cursor = connection.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT id FROM orders WHERE external_id = %s", (external_id,))
+            cursor.execute("SELECT id, requester_id FROM orders WHERE external_id = %s", (external_id,))
             order = cursor.fetchone()
             if not order:
                 return
@@ -288,6 +312,23 @@ class MySQLWarehouseRepository:
                 "INSERT INTO validation_decisions (order_id, decision_status, risk, confidence, reasons) VALUES (%s, %s, %s, %s, %s)",
                 (order["id"], decision["status"], decision["risk"], 1.0, json.dumps(decision["reasons"], ensure_ascii=False))
             )
+            cursor.execute(
+                "UPDATE orders SET status = %s, risk = %s, approved_at = CASE WHEN %s = 'approved' THEN NOW() ELSE NULL END WHERE id = %s",
+                (decision["status"], decision["risk"], decision["status"], order["id"]),
+            )
+            severity = "info" if decision["risk"] == "green" else "critical" if decision["risk"] == "red" else "warning"
+            payload = json.dumps({"decision_status": decision["status"], "risk": decision["risk"], "reasons": decision["reasons"]}, ensure_ascii=False)
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, actor_id, payload) VALUES ('ai.validation', %s, 'order', %s, 'system', NULL, %s)",
+                (severity, external_id, payload),
+            )
+            event_id = cursor.lastrowid
+            if decision["risk"] != "green":
+                title = "Pedido bloqueado" if decision["risk"] == "red" else "Pedido requiere revisión"
+                cursor.execute(
+                    "INSERT INTO notifications (user_id, event_id, channel, status, title, body) VALUES (%s, %s, 'in_app', 'pending', %s, %s)",
+                    (order["requester_id"], event_id, title, f"{external_id}: {'; '.join(decision['reasons'])}"),
+                )
             connection.commit()
         finally:
             cursor.close()

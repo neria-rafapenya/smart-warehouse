@@ -66,6 +66,12 @@ class WarehouseService:
     def events(self, limit: int = 50) -> list[dict]:
         return list(self.repository.list_events(limit=limit))
 
+    def alerts(self, limit: int = 50) -> list[dict]:
+        return list(self.repository.list_alerts(limit=limit))
+
+    def decisions(self, external_id: str) -> list[dict]:
+        return list(self.repository.list_decisions(external_id))
+
     def create_order(self, payload: dict) -> dict:
         return self.repository.create_order(payload)
 

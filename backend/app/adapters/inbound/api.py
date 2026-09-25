@@ -108,6 +108,10 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         except OrderNotFoundError as error:
             raise HTTPException(status_code=404, detail=f"Order {external_id} not found") from error
 
+    @router.get("/orders/{external_id}/decisions", tags=["orders"])
+    def decisions(external_id: str, current: Annotated[WarehouseService, Depends(service)]):
+        return current.decisions(external_id)
+
     @router.post("/orders/{external_id}/validate", response_model=ValidationResponse, tags=["orders"])
     def validate_order(external_id: str, current: Annotated[WarehouseService, Depends(service)]):
         try:
@@ -205,5 +209,9 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/events", tags=["events"])
     def events(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200)):
         return current.events(limit=limit)
+
+    @router.get("/alerts", tags=["events"])
+    def alerts(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200)):
+        return current.alerts(limit=limit)
 
     return router

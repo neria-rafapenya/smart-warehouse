@@ -63,6 +63,8 @@ Endpoints iniciales:
 - `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
 - `GET /api/v1/events?limit=50`
+- `GET /api/v1/alerts?limit=50` — alertas pendientes desde `notifications` y `audit_events`.
+- `GET /api/v1/orders/{external_id}/decisions` — decisiones persistidas del motor determinista/IA.
 
 ## Facturas PDF y documentos obligatorios
 
