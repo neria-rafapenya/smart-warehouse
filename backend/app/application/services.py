@@ -75,8 +75,23 @@ class WarehouseService:
     def events(self, limit: int = 50) -> list[dict]:
         return list(self.repository.list_events(limit=limit))
 
-    def alerts(self, limit: int = 50) -> list[dict]:
-        return list(self.repository.list_alerts(limit=limit))
+    def alerts(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, status: str = "unread") -> list[dict]:
+        return list(self.repository.list_alerts(limit=limit, severity=severity, event_type=event_type, status=status))
+
+    def mark_alert_read(self, alert_id: int) -> dict:
+        return self.repository.mark_alert_read(alert_id)
+
+    def mark_all_alerts_read(self) -> int:
+        return self.repository.mark_all_alerts_read()
+
+    def alert_rules(self) -> list[dict]:
+        return list(self.repository.list_alert_rules())
+
+    def create_alert_rule(self, payload: dict) -> dict:
+        return self.repository.create_alert_rule(payload)
+
+    def update_alert_rule(self, rule_id: int, payload: dict) -> dict:
+        return self.repository.update_alert_rule(rule_id, payload)
 
     def decisions(self, external_id: str) -> list[dict]:
         return list(self.repository.list_decisions(external_id))

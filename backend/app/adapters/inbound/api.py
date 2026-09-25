@@ -43,6 +43,17 @@ class AccountingExportRequest(BaseModel):
     target_system: str = "corporate-accounting-rest"
 
 
+class AlertRuleRequest(BaseModel):
+    code: str = Field(min_length=3, max_length=64)
+    name: str = Field(min_length=3, max_length=160)
+    description: str | None = None
+    event_type: str = Field(min_length=3, max_length=64)
+    severity: str = Field(pattern="^(info|warning|critical)$")
+    enabled: bool = True
+    recipients: list[str] = Field(default_factory=list)
+    channels: list[str] = Field(default_factory=lambda: ["in_app"])
+
+
 def _amount(value: str) -> float | None:
     normalized = value.replace("€", "").replace("EUR", "").replace(" ", "").strip()
     if not normalized:
@@ -314,7 +325,36 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         return current.events(limit=limit)
 
     @router.get("/alerts", tags=["events"])
-    def alerts(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200)):
-        return current.alerts(limit=limit)
+    def alerts(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200), severity: str | None = Query(default=None, pattern="^(info|warning|critical)$"), event_type: str | None = None, status: str = Query(default="unread", pattern="^(unread|read|all)$")):
+        return current.alerts(limit=limit, severity=severity, event_type=event_type, status=status)
+
+    @router.post("/alerts/read-all", tags=["events"])
+    def read_all_alerts(current: Annotated[WarehouseService, Depends(service)]):
+        return {"marked_read": current.mark_all_alerts_read()}
+
+    @router.post("/alerts/{alert_id}/read", tags=["events"])
+    def read_alert(alert_id: int, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.mark_alert_read(alert_id)
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @router.get("/alert-rules", tags=["events"])
+    def alert_rules(current: Annotated[WarehouseService, Depends(service)]):
+        return current.alert_rules()
+
+    @router.post("/alert-rules", status_code=201, tags=["events"])
+    def create_alert_rule(request: AlertRuleRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.create_alert_rule(request.model_dump())
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @router.patch("/alert-rules/{rule_id}", tags=["events"])
+    def update_alert_rule(rule_id: int, request: AlertRuleRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.update_alert_rule(rule_id, request.model_dump())
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
 
     return router

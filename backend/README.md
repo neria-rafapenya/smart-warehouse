@@ -32,6 +32,7 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/003_seed_abundant_deterministic_data.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/004_invoice_reconciliation.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/005_accounting_exports.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/006_alert_management.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -68,7 +69,9 @@ Endpoints iniciales:
 - `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
 - `GET /api/v1/events?limit=50`
-- `GET /api/v1/alerts?limit=50` — alertas pendientes desde `notifications` y `audit_events`.
+- `GET /api/v1/alerts?limit=50&severity=warning&event_type=ai.validation&status=unread` — alertas filtrables desde `notifications` y `audit_events`.
+- `POST /api/v1/alerts/{id}/read` y `POST /api/v1/alerts/read-all` — marcan alertas como leídas.
+- `GET/POST/PATCH /api/v1/alert-rules` — consulta y configura reglas, gravedad, canales y destinatarios.
 - `GET /api/v1/orders/{external_id}/decisions` — decisiones persistidas del motor determinista/IA.
 
 ## Facturas PDF y documentos obligatorios
@@ -84,6 +87,10 @@ Al registrar una factura se lanza una conciliación determinista de tres vías. 
 ## Exportación contable
 
 La tabla `invoice_accounting_exports` controla el ciclo `pending → exportable → exported`. El fichero CSV/Excel utiliza un contrato normalizado con número y fecha de factura, proveedor, NIF, moneda, subtotal, impuestos, total, pedido, recepción y estados de conciliación. La llamada de envío actual es un adaptador REST local determinista: deja registrada la referencia externa y el sistema destino, preparado para sustituirlo por el endpoint del software contable corporativo sin acoplar el frontend ni los casos de uso.
+
+## Gestión de alertas
+
+La tabla `alert_rules` persiste reglas activas, tipo de evento, gravedad, canales y destinatarios. Las notificaciones pueden filtrarse por gravedad y tipo, marcarse individualmente o en bloque como leídas y quedan auditadas sin eliminar el histórico.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

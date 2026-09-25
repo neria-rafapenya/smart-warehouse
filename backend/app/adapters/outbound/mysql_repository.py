@@ -489,16 +489,89 @@ class MySQLWarehouseRepository:
                 FROM audit_events ORDER BY created_at DESC LIMIT {safe_limit}"""
         )
 
-    def list_alerts(self, limit: int = 50) -> Sequence[dict]:
+    def list_alerts(self, limit: int = 50, severity: str | None = None, event_type: str | None = None, status: str = "unread") -> Sequence[dict]:
         safe_limit = max(1, min(limit, 200))
+        clauses = []
+        params: list[Any] = []
+        if status != "all":
+            clauses.append("n.status = %s")
+            params.append("pending" if status == "unread" else status)
+        if severity:
+            clauses.append("e.severity = %s")
+            params.append(severity)
+        if event_type:
+            clauses.append("e.event_type = %s")
+            params.append(event_type)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         return self._fetch_all(
-            f"""SELECT n.id, n.title, n.body, n.status, n.channel, n.created_at,
+            f"""SELECT n.id, n.title, n.body, n.status, n.channel, n.read_at, n.created_at,
                        e.event_type, e.severity, e.aggregate_type, e.aggregate_id
                 FROM notifications n
                 LEFT JOIN audit_events e ON e.id = n.event_id
-                WHERE n.status IN ('pending', 'unread')
-                ORDER BY n.created_at DESC LIMIT {safe_limit}"""
+                {where}
+                ORDER BY n.created_at DESC LIMIT {safe_limit}""",
+            tuple(params),
         )
+
+    def mark_alert_read(self, alert_id: int) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute("UPDATE notifications SET status = 'read', read_at = NOW() WHERE id = %s", (alert_id,))
+            if cursor.rowcount == 0:
+                raise ValueError(f"Alerta no encontrada: {alert_id}")
+            connection.commit()
+            return {"id": alert_id, "status": "read"}
+        finally:
+            cursor.close()
+            connection.close()
+
+    def mark_all_alerts_read(self) -> int:
+        connection = self._connect()
+        cursor = connection.cursor()
+        try:
+            cursor.execute("UPDATE notifications SET status = 'read', read_at = NOW() WHERE status IN ('pending', 'unread')")
+            total = cursor.rowcount
+            connection.commit()
+            return total
+        finally:
+            cursor.close()
+            connection.close()
+
+    def list_alert_rules(self) -> Sequence[dict]:
+        return self._fetch_all("SELECT id, code, name, description, event_type, severity, enabled, recipients_json, channels_json, created_at, updated_at FROM alert_rules ORDER BY name")
+
+    def create_alert_rule(self, payload: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """INSERT INTO alert_rules (code, name, description, event_type, severity, enabled, recipients_json, channels_json)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (payload["code"], payload["name"], payload.get("description"), payload["event_type"], payload["severity"], payload.get("enabled", True), json.dumps(payload.get("recipients", [])), json.dumps(payload.get("channels", ["in_app"]))),
+            )
+            connection.commit()
+            return {"id": cursor.lastrowid, **payload}
+        except mysql.connector.Error as error:
+            connection.rollback()
+            raise ValueError(f"No se pudo crear la regla: {error.msg}") from error
+        finally:
+            cursor.close()
+            connection.close()
+
+    def update_alert_rule(self, rule_id: int, payload: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            fields = {"name": payload.get("name"), "description": payload.get("description"), "event_type": payload.get("event_type"), "severity": payload.get("severity"), "enabled": payload.get("enabled"), "recipients_json": json.dumps(payload.get("recipients", [])), "channels_json": json.dumps(payload.get("channels", ["in_app"]))}
+            cursor.execute("UPDATE alert_rules SET name=%s, description=%s, event_type=%s, severity=%s, enabled=%s, recipients_json=%s, channels_json=%s WHERE id=%s", (*fields.values(), rule_id))
+            if cursor.rowcount == 0:
+                raise ValueError(f"Regla no encontrada: {rule_id}")
+            connection.commit()
+            return {"id": rule_id, **payload}
+        finally:
+            cursor.close()
+            connection.close()
 
     def list_decisions(self, external_id: str) -> Sequence[dict]:
         return self._fetch_all(

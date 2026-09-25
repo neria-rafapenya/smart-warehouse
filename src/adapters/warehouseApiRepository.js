@@ -45,7 +45,12 @@ function mapEvent(item) {
 }
 
 function mapAlert(item) {
-  return { ...item, time: dateLabel(item.created_at), tone: item.severity === 'critical' ? 'danger' : 'warning' }
+  return { ...item, time: dateLabel(item.created_at), tone: item.severity === 'critical' ? 'danger' : item.severity === 'warning' ? 'warning' : 'info', read: item.status === 'read' }
+}
+
+function mapAlertRule(item) {
+  const parse = value => Array.isArray(value) ? value : typeof value === 'string' ? JSON.parse(value) : []
+  return { ...item, recipients: parse(item.recipients_json), channels: parse(item.channels_json) }
 }
 
 function mapReceipt(item) {
@@ -61,11 +66,16 @@ export const warehouseRepository = {
   reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
   exportInvoice: (invoiceNumber, targetSystem = 'corporate-accounting-rest') => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/accounting-export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_system: targetSystem }) }),
   downloadAccountingExport: async format => { const response = await fetch(`${API_BASE_URL}/documents/invoices/accounting-export?format=${format}`); if (!response.ok) throw new Error(`API ${response.status}: exportación contable`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-accounting.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
+  readAlert: alertId => send(`/alerts/${alertId}/read`, { method: 'POST' }),
+  readAllAlerts: () => send('/alerts/read-all', { method: 'POST' }),
+  listAlertRules: () => get('/alert-rules'),
+  createAlertRule: payload => send('/alert-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  updateAlertRule: (ruleId, payload) => send(`/alert-rules/${ruleId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   async loadAll() {
-    const [dashboard, orders, stock, suppliers, invoices, procedures, events, alerts, receipts] = await Promise.all([
-      get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'),
+    const [dashboard, orders, stock, suppliers, invoices, procedures, events, alerts, receipts, alertRules] = await Promise.all([
+      get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'),
     ])
     const pending = Number(dashboard.orders_pending || 0)
     const lowStock = (stock || []).filter(item => item.status === 'replenish').length
@@ -76,7 +86,7 @@ export const warehouseRepository = {
         { label: 'Alertas activas', value: String(lowStock), change: 'stock bajo', tone: 'danger', icon: 'bi-bell' },
         { label: 'Referencias activas', value: String(dashboard.stock_items || 0), change: 'datos MySQL', tone: 'info', icon: 'bi-box-seam' },
       ],
-      orders: orders.map(mapOrder), stock: stock.map(mapStock), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), receipts: receipts.map(mapReceipt),
+      orders: orders.map(mapOrder), stock: stock.map(mapStock), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), alertRules: alertRules.map(mapAlertRule), receipts: receipts.map(mapReceipt),
     }
   },
 }
