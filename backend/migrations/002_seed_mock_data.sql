@@ -55,3 +55,33 @@ INSERT INTO required_procedures (code, name, description) VALUES
 ('RECEIVING_CHECK', 'Checklist de recepción', 'Registrar cantidades, daños y ubicación de entrada.'),
 ('INVOICE_MATCH', 'Conciliación de factura', 'Contrastar factura con pedido y recepción.')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+SELECT 'PED-2025-00482', 'purchase_request', 'pending', 'red', u.id, s.id, w.id, 14710.74, 3089.26, 17800.00, '2025-09-25 09:42:00'
+FROM users u, suppliers s, warehouses w WHERE u.email = 'laura.martin@smartwarehouse.local' AND s.code = 'ROCA' AND w.code = 'MAD-01'
+ON DUPLICATE KEY UPDATE status = VALUES(status), risk = VALUES(risk), total = VALUES(total);
+INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+SELECT 'PED-2025-00481', 'purchase_request', 'approved', 'green', u.id, s.id, w.id, 3748.76, 787.24, 4536.00, '2025-09-25 09:18:00'
+FROM users u, suppliers s, warehouses w WHERE u.email = 'javier.soler@smartwarehouse.local' AND s.code = 'SALTOKI' AND w.code = 'MAD-01'
+ON DUPLICATE KEY UPDATE status = VALUES(status), risk = VALUES(risk), total = VALUES(total);
+INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+SELECT 'PED-2025-00480', 'purchase_request', 'pending', 'yellow', u.id, s.id, w.id, 3272.73, 687.27, 3960.00, '2025-09-25 08:56:00'
+FROM users u, suppliers s, warehouses w WHERE u.email = 'marta.gil@smartwarehouse.local' AND s.code = 'GCABLE' AND w.code = 'MAD-01'
+ON DUPLICATE KEY UPDATE status = VALUES(status), risk = VALUES(risk), total = VALUES(total);
+INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+SELECT 'PED-2025-00479', 'purchase_request', 'approved', 'green', u.id, s.id, w.id, 262.81, 55.19, 318.00, '2025-09-24 17:22:00'
+FROM users u, suppliers s, warehouses w WHERE u.email = 'david.cano@smartwarehouse.local' AND s.code = 'SALTOKI' AND w.code = 'MAD-01'
+ON DUPLICATE KEY UPDATE status = VALUES(status), risk = VALUES(risk), total = VALUES(total);
+INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+SELECT 'PED-2025-00478', 'purchase_request', 'pending', 'yellow', u.id, s.id, w.id, 1175.21, 246.79, 1422.00, '2025-09-24 16:48:00'
+FROM users u, suppliers s, warehouses w WHERE u.email = 'ana.ruiz@smartwarehouse.local' AND s.code = 'SALTOKI' AND w.code = 'MAD-01'
+ON DUPLICATE KEY UPDATE status = VALUES(status), risk = VALUES(risk), total = VALUES(total);
+
+INSERT INTO order_lines (order_id, product_id, requested_quantity, unit_price, line_total)
+SELECT o.id, p.id, x.quantity, x.unit_price, x.line_total
+FROM orders o JOIN products p ON 1 = 1 JOIN (SELECT 'PED-2025-00482' external_id, 'ROCA-A5A3' sku, 250 quantity, 71.20 unit_price, 17800.00 line_total UNION ALL
+  SELECT 'PED-2025-00481', 'PEX-16-ML', 840, 5.40, 4536.00 UNION ALL
+  SELECT 'PED-2025-00480', 'RZ1-3G25', 1200, 3.30, 3960.00 UNION ALL
+  SELECT 'PED-2025-00479', 'LLV-12-ESF', 60, 5.30, 318.00 UNION ALL
+  SELECT 'PED-2025-00478', 'BOM-750W', 18, 79.00, 1422.00) x ON x.external_id = o.external_id AND x.sku = p.sku
+ON DUPLICATE KEY UPDATE requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total);

@@ -1,0 +1,1 @@
+"""Smart Warehouse backend package."""

@@ -32,3 +32,25 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
 
 El esquema actual crea 19 tablas para almacenes, ubicaciones, catálogo, proveedores, stock, pedidos, validaciones, recepciones, documentos, facturas, procedimientos, auditoría y notificaciones.
+
+## Arrancar la API REST
+
+```bash
+cd backend
+source .venv/bin/activate
+MYSQL_PASSWORD='' uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Documentación interactiva: `http://localhost:8000/docs`.
+
+Endpoints iniciales:
+
+- `GET /api/v1/health`
+- `GET /api/v1/dashboard`
+- `GET /api/v1/orders?status=pending`
+- `GET /api/v1/orders/{external_id}`
+- `POST /api/v1/orders/{external_id}/validate`
+- `GET /api/v1/stock`
+- `GET /api/v1/suppliers`
+- `GET /api/v1/documents/invoices`
+- `GET /api/v1/events?limit=50`

@@ -1,0 +1,9 @@
+[project]
+name = "smart-warehouse-api"
+version = "0.1.0"
+description = "FastAPI REST API for Smart Warehouse"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["app"]

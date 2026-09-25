@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS order_lines (
   approved_quantity DECIMAL(14,3),
   unit_price DECIMAL(14,4) NOT NULL,
   line_total DECIMAL(14,2) NOT NULL,
+  UNIQUE KEY uq_order_product (order_id, product_id),
   CONSTRAINT fk_order_lines_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT fk_order_lines_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB;

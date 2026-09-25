@@ -7,6 +7,9 @@ class ValidationDecision:
     risk: str
     reasons: list[str]
 
+    def as_dict(self) -> dict:
+        return {"status": self.status, "risk": self.risk, "reasons": self.reasons}
+
 def validate_order(*, requested_qty: int, historical_average: int, available_stock: int,
                    demand_qty: int, required_document_present: bool) -> ValidationDecision:
     reasons: list[str] = []

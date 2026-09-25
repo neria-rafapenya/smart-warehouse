@@ -41,7 +41,7 @@ docs/             decisiones y arquitectura evolutiva
 ### Fase 2 · Ecosistema local
 
 - Base MySQL `smart_warehouse` creada con migración y seed inicial.
-- API Python FastAPI REST con arquitectura hexagonal, pendiente de implementar.
+- API Python FastAPI REST con arquitectura hexagonal y endpoints iniciales operativos.
 - Datos abundantes y carga mediante plantilla Excel/CSV versionada.
 - Datos abundantes y carga mediante plantilla Excel/CSV versionada.
 - Flujo de PDF digital y factura escaneada con extracción trazable.
