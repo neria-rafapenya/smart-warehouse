@@ -5,7 +5,7 @@
 .top-brand .brand-mark{flex:none;color:#fff}
 .top-brand strong{display:block;font:700 17px 'Space Grotesk'}.top-brand strong span{color:#377cf6}.top-brand small{display:block;color:#9aa5b7;font-size:8px;letter-spacing:2px;margin-top:3px}
 .top-menu{gap:3px;align-items:center;flex-wrap:wrap}.top-menu .nav-link{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:6px;color:#718097;font-size:11px;white-space:nowrap}.top-menu .nav-link i{font-size:14px}.top-menu .nav-link em{font-style:normal;font-size:9px;background:#eef2f8;border-radius:9px;padding:2px 5px}.top-menu .nav-link.active{background:#eaf1ff;color:#286be2;font-weight:600}.top-menu .nav-link.active em{background:#cfe0ff;color:#286be2}
-.topbar .top-actions{display:flex;align-items:center;gap:7px}.topbar .copilot-btn{padding:8px 10px;font-size:11px}.topbar .breadcrumb{margin-top:18px}.topbar h1{font-size:19px}
+.topbar .top-actions{display:flex;align-items:center;gap:7px}.topbar .copilot-btn{padding:8px 10px;font-size:11px}.topbar h1{font-size:19px;margin-top:18px}
 .page-content.container{padding-top:29px;max-width:1380px}
 /* Tamaño base solicitado para el contenido operativo. */
 .page-content{font-size:14px}
@@ -29,5 +29,5 @@
 .page-content .eyebrow,
 .page-content .panel-head p,
 .page-content .reason{font-size:10px}
-@media(max-width:1199px){.topbar{min-height:196px}.top-menu{padding-top:2px}.topbar .breadcrumb{margin-top:10px}}
-@media(max-width:720px){.topbar{padding:14px 0;min-height:0}.top-menu .nav-link{padding:7px 8px}.topbar .breadcrumb{margin-top:12px}.page-content.container{padding-top:22px}.topbar .top-actions{justify-content:flex-start}}
+@media(max-width:1199px){.topbar{min-height:196px}.top-menu{padding-top:2px}}
+@media(max-width:720px){.topbar{padding:14px 0;min-height:0}.top-menu .nav-link{padding:7px 8px}.page-content.container{padding-top:22px}.topbar .top-actions{justify-content:flex-start}}
