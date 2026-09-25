@@ -231,6 +231,13 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
+    @router.post("/documents/invoices/{invoice_number}/reconcile", tags=["documents"])
+    def reconcile_invoice(invoice_number: str, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.reconcile_invoice(invoice_number)
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
     @router.get("/documents/procedures", tags=["documents"])
     def procedures(current: Annotated[WarehouseService, Depends(service)]):
         return current.procedures()

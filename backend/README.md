@@ -30,6 +30,7 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/001_initial_schema.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/002_seed_mock_data.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/003_seed_abundant_deterministic_data.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/004_invoice_reconciliation.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -59,6 +60,7 @@ Endpoints iniciales:
 - `GET /api/v1/suppliers`
 - `GET /api/v1/documents/invoices`
 - `POST /api/v1/documents/invoices` — recibe una factura PDF, extrae sus campos y la guarda en almacenamiento local.
+- `POST /api/v1/documents/invoices/{invoice_number}/reconcile` — ejecuta la conciliación automática de factura, pedido y recepción.
 - `GET /api/v1/documents/procedures` — resumen de procedimientos obligatorios pendientes.
 - `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
@@ -71,6 +73,10 @@ Endpoints iniciales:
 Las facturas digitales se procesan con `pypdf`. Se extraen de forma determinista el proveedor mediante NIF, número, fecha, moneda, subtotal, impuestos y total. Si el PDF no contiene una capa de texto, la API detecta el caso, rasteriza sus páginas con `pdftoppm` y ejecuta OCR con Tesseract (`spa+eng`). Los campos obtenidos por OCR tienen confianza reducida y el documento queda siempre en `pending_review`, aunque se hayan encontrado todos los campos, para que una persona valide el resultado.
 
 El resultado conserva trazabilidad en `documents.extracted_json`: origen de extracción (`digital` u `ocr`), confianza por campo, campos con baja confianza, razones de revisión y metadatos del OCR. Si las herramientas OCR no están instaladas, la factura no se pierde: queda pendiente de revisión con una razón explícita. En local se necesitan Tesseract y Poppler (`pdftoppm`); su empaquetado para Docker/AWS se resolverá en la Fase 3.
+
+## Conciliación automática
+
+Al registrar una factura se lanza una conciliación determinista de tres vías. Se busca el pedido del mismo proveedor y se comparan proveedor, líneas y cantidades si la factura contiene líneas estructuradas, impuestos y total. Después se localiza la recepción vinculada al pedido y se comprueba que las cantidades recibidas cubren las esperadas. El resultado se persiste en `invoice_reconciliations`, se registra en auditoría y las diferencias generan una notificación para revisión humana.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

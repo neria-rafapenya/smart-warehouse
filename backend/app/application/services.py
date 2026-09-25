@@ -51,6 +51,9 @@ class WarehouseService:
     def invoices(self) -> list[dict]:
         return list(self.repository.list_invoices())
 
+    def reconcile_invoice(self, invoice_number: str) -> dict:
+        return self.repository.reconcile_invoice(invoice_number)
+
     def procedures(self, external_id: str | None = None) -> list[dict]:
         return list(self.repository.list_procedures(external_id=external_id))
 

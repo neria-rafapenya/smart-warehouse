@@ -30,7 +30,8 @@ function mapSupplier(item) {
 }
 
 function mapInvoice(item) {
-  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar' }
+  const reconciliationStatus = item.reconciliation_status === 'matched' ? 'Conciliada' : item.reconciliation_status ? 'Revisar conciliación' : 'Pendiente conciliar'
+  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar', reconciliationStatus, reconciliationTone: item.reconciliation_status === 'matched' ? 'success' : 'warning' }
 }
 
 function mapProcedure(item) {
@@ -56,6 +57,7 @@ export const warehouseRepository = {
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
   uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
+  reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   async loadAll() {

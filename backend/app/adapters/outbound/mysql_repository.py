@@ -120,10 +120,16 @@ class MySQLWarehouseRepository:
         return self._fetch_all(
             """
             SELECT i.invoice_number, s.legal_name AS supplier, i.invoice_date,
-                   i.total, i.currency, i.status, d.extraction_status, d.confidence
+                   i.total, i.currency, i.status, d.extraction_status, d.confidence,
+                   ir.status AS reconciliation_status, ir.confidence AS reconciliation_confidence,
+                   ir.checks_json AS reconciliation_checks
             FROM invoices i
             LEFT JOIN suppliers s ON s.id = i.supplier_id
             LEFT JOIN documents d ON d.id = i.document_id
+            LEFT JOIN invoice_reconciliations ir ON ir.id = (
+                SELECT latest.id FROM invoice_reconciliations latest
+                WHERE latest.invoice_id = i.id ORDER BY latest.created_at DESC LIMIT 1
+            )
             ORDER BY i.created_at DESC
             """
         )
@@ -203,11 +209,161 @@ class MySQLWarehouseRepository:
                     (event_id, "Factura requiere revisión", f"{filename}: faltan datos fiables o no se ha identificado el proveedor."),
                 )
             connection.commit()
-            return {"invoice_number": invoice_number, "filename": filename, "status": "exportable" if severity == "info" else "pending_review", "confidence": extracted.get("confidence"), "storage_key": storage_key, "extraction_source": extracted.get("extraction_source"), "ocr_applied": extracted.get("ocr_attempted", False), "low_confidence_fields": extracted.get("low_confidence_fields", []), "review_reasons": extracted.get("review_reasons", [])}
+            reconciliation = self.reconcile_invoice(invoice_number)
+            return {"invoice_number": invoice_number, "filename": filename, "status": "exportable" if severity == "info" else "pending_review", "confidence": extracted.get("confidence"), "storage_key": storage_key, "extraction_source": extracted.get("extraction_source"), "ocr_applied": extracted.get("ocr_attempted", False), "low_confidence_fields": extracted.get("low_confidence_fields", []), "review_reasons": extracted.get("review_reasons", []), "reconciliation": reconciliation}
         except Exception:
             connection.rollback()
             if target.exists():
                 target.unlink()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+    def reconcile_invoice(self, invoice_number: str) -> dict:
+        """Run deterministic three-way matching: invoice, purchase order and receipt."""
+        invoice_rows = self._fetch_all(
+            """
+            SELECT i.id AS invoice_id, i.invoice_number, i.supplier_id, s.legal_name AS supplier,
+                   i.currency, i.subtotal, i.tax_amount, i.total, i.invoice_date,
+                   d.extracted_json
+            FROM invoices i
+            LEFT JOIN suppliers s ON s.id = i.supplier_id
+            LEFT JOIN documents d ON d.id = i.document_id
+            WHERE i.invoice_number = %s
+            LIMIT 1
+            """,
+            (invoice_number,),
+        )
+        if not invoice_rows:
+            raise ValueError(f"Factura no encontrada: {invoice_number}")
+        invoice = invoice_rows[0]
+        extracted = invoice.get("extracted_json") or {}
+        if isinstance(extracted, str):
+            extracted = json.loads(extracted)
+
+        candidates = self._fetch_all(
+            """
+            SELECT o.id AS order_id, o.external_id, o.supplier_id, s.legal_name AS supplier,
+                   o.currency, o.subtotal, o.tax_amount, o.total, o.requested_at,
+                   ol.product_id, p.sku, p.description, ol.requested_quantity, ol.unit_price, ol.line_total
+            FROM orders o
+            LEFT JOIN suppliers s ON s.id = o.supplier_id
+            LEFT JOIN order_lines ol ON ol.order_id = o.id
+            LEFT JOIN products p ON p.id = ol.product_id
+            WHERE o.supplier_id = %s
+            ORDER BY ABS(o.total - COALESCE(%s, 0)), o.requested_at DESC
+            LIMIT 20
+            """,
+            (invoice["supplier_id"], invoice["total"]),
+        ) if invoice.get("supplier_id") else []
+
+        order = None
+        if candidates:
+            grouped: dict[int, dict] = {}
+            for row in candidates:
+                current = grouped.setdefault(row["order_id"], {**row, "lines": []})
+                if row.get("product_id"):
+                    current["lines"].append(row)
+            order = min(grouped.values(), key=lambda item: abs(float(item.get("total") or 0) - float(invoice.get("total") or 0)))
+
+        def money(value):
+            return round(float(value), 2) if value is not None else None
+
+        def check(status: str, expected, actual, detail: str) -> dict:
+            return {"status": status, "expected": expected, "actual": actual, "detail": detail}
+
+        if not order:
+            checks = {
+                "supplier": check("missing", invoice.get("supplier"), None, "No hay pedidos del proveedor identificado"),
+                "lines": check("missing", None, None, "No se encontró un pedido candidato"),
+                "quantities": check("missing", None, None, "No se encontró un pedido candidato"),
+                "taxes": check("missing", None, money(invoice.get("tax_amount")), "No se encontró un pedido candidato"),
+                "total": check("missing", None, money(invoice.get("total")), "No se encontró un pedido candidato"),
+                "receipt": check("missing", None, None, "No existe una recepción vinculada"),
+            }
+            return self._persist_reconciliation(invoice, None, None, checks)
+
+        supplier_match = invoice.get("supplier_id") == order.get("supplier_id")
+        total_match = money(invoice.get("total")) is not None and abs(money(invoice.get("total")) - money(order.get("total"))) <= 0.01
+        tax_available = invoice.get("tax_amount") is not None and order.get("tax_amount") is not None
+        tax_match = tax_available and abs(money(invoice.get("tax_amount")) - money(order.get("tax_amount"))) <= 0.01
+
+        invoice_lines = extracted.get("lines") if isinstance(extracted, dict) else None
+        invoice_lines = invoice_lines if isinstance(invoice_lines, list) else []
+        order_lines = order["lines"]
+        line_comparison = []
+        if invoice_lines:
+            by_sku = {str(line.get("sku", "")).upper(): line for line in invoice_lines}
+            for line in order_lines:
+                invoice_line = by_sku.get(str(line.get("sku", "")).upper())
+                expected_qty = money(line.get("requested_quantity"))
+                actual_qty = money(invoice_line.get("quantity")) if invoice_line else None
+                line_comparison.append({"sku": line.get("sku"), "order_quantity": expected_qty, "invoice_quantity": actual_qty, "match": actual_qty is not None and abs(expected_qty - actual_qty) <= 0.001})
+            lines_match = bool(line_comparison) and all(item["match"] for item in line_comparison)
+            lines_status = "match" if lines_match else "mismatch"
+            lines_detail = "Líneas y cantidades comparadas contra el pedido"
+        else:
+            lines_match = False
+            lines_status = "missing"
+            lines_detail = "La factura no contiene líneas estructuradas para comparar"
+
+        receipt_rows = self._fetch_all(
+            """
+            SELECT gr.id AS receipt_id, gr.receipt_number, gr.status,
+                   grl.product_id, grl.expected_quantity, grl.received_quantity, p.sku
+            FROM goods_receipts gr
+            LEFT JOIN goods_receipt_lines grl ON grl.receipt_id = gr.id
+            LEFT JOIN products p ON p.id = grl.product_id
+            WHERE gr.order_id = %s
+            ORDER BY gr.created_at DESC
+            """,
+            (order["order_id"],),
+        )
+        receipt = receipt_rows[0] if receipt_rows else None
+        receipt_complete = bool(receipt) and receipt["status"] in {"received", "complete", "available"} and all(float(row.get("received_quantity") or 0) >= float(row.get("expected_quantity") or 0) for row in receipt_rows if row.get("product_id"))
+        receipt_status = "complete" if receipt_complete else "partial" if receipt else "missing"
+
+        checks = {
+            "supplier": check("match" if supplier_match else "mismatch", invoice.get("supplier"), order.get("supplier"), "Proveedor de factura y pedido"),
+            "lines": check(lines_status, len(order_lines), len(invoice_lines), lines_detail),
+            "quantities": check("match" if lines_match else "missing" if not invoice_lines else "mismatch", [money(line.get("requested_quantity")) for line in order_lines], [item.get("invoice_quantity") for item in line_comparison], "Cantidades por línea"),
+            "taxes": check("match" if tax_match else "missing" if not tax_available else "mismatch", money(order.get("tax_amount")), money(invoice.get("tax_amount")), "Impuestos del pedido y la factura"),
+            "total": check("match" if total_match else "mismatch", money(order.get("total")), money(invoice.get("total")), "Total de pedido y factura"),
+            "receipt": check(receipt_status, receipt["receipt_number"] if receipt else None, [row.get("received_quantity") for row in receipt_rows], "Recepción de almacén vinculada al pedido"),
+        }
+        return self._persist_reconciliation(invoice, order, receipt, checks)
+
+    def _persist_reconciliation(self, invoice: dict, order: dict | None, receipt: dict | None, checks: dict) -> dict:
+        statuses = [item["status"] for item in checks.values()]
+        matched = all(status == "match" or (key == "receipt" and status == "complete") for key, status in ((key, value["status"]) for key, value in checks.items()))
+        status = "matched" if matched else "pending_review"
+        confidence = 1.0 if matched else round(sum(status in {"match", "complete"} for status in statuses) / max(len(statuses), 1), 4)
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """INSERT INTO invoice_reconciliations (invoice_id, order_id, receipt_id, status, confidence, checks_json)
+                   VALUES (%s, %s, %s, %s, %s, %s)
+                   ON DUPLICATE KEY UPDATE order_id = VALUES(order_id), receipt_id = VALUES(receipt_id), status = VALUES(status), confidence = VALUES(confidence), checks_json = VALUES(checks_json), updated_at = CURRENT_TIMESTAMP""",
+                (invoice["invoice_id"], order["order_id"] if order else None, receipt["receipt_id"] if receipt else None, status, confidence, json.dumps(checks, ensure_ascii=False)),
+            )
+            event_type = "invoice.reconciled" if status == "matched" else "invoice.reconciliation_review"
+            severity = "info" if status == "matched" else "warning"
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES (%s, %s, 'invoice', %s, 'system', %s)",
+                (event_type, severity, invoice["invoice_number"], json.dumps({"status": status, "order": order.get("external_id") if order else None, "checks": checks}, ensure_ascii=False)),
+            )
+            if status != "matched":
+                event_id = cursor.lastrowid
+                cursor.execute(
+                    "INSERT INTO notifications (event_id, channel, status, title, body) VALUES (%s, 'in_app', 'pending', %s, %s)",
+                    (event_id, "Conciliación requiere revisión", f"{invoice['invoice_number']}: existen diferencias o datos pendientes entre factura, pedido y recepción."),
+                )
+            connection.commit()
+            return {"invoice_number": invoice["invoice_number"], "status": status, "confidence": confidence, "order": order.get("external_id") if order else None, "receipt": receipt.get("receipt_number") if receipt else None, "checks": checks}
+        except Exception:
+            connection.rollback()
             raise
         finally:
             cursor.close()
