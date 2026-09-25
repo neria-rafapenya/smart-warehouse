@@ -18,10 +18,9 @@ function App() {
   const [data, setData] = useState(null)
   useEffect(() => { warehouseService.loadDashboard().then(setData) }, [])
   return <div className="app-shell">
-    <Sidebar />
     <main className="main-area">
       <Header onCopilot={() => setCopilot(true)} />
-      <div className="page-content"><Routes>
+      <div className="page-content container"><Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pedidos" element={<Orders />} />
         <Route path="/pedidos/:id" element={<OrderDetail />} />
@@ -36,15 +35,7 @@ function App() {
   </div>
 }
 
-function Sidebar() { return <aside className="sidebar">
-  <div className="brand"><div className="brand-mark"><i className="bi bi-boxes" /></div><div><strong>smart<span>warehouse</span></strong><small>CONTROL CENTER</small></div></div>
-  <div className="workspace-switch"><span className="status-dot" /> Operaciones · Madrid <i className="bi bi-chevron-down" /></div>
-  <div className="nav-label">OPERACIONES</div>
-  <nav>{nav.map(item => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}><i className={`bi ${item.icon}`} /><span>{item.label}</span>{item.count && <em>{item.count}</em>}</NavLink>)}</nav>
-  <div className="sidebar-bottom"><div className="ai-status"><span className="pulse-dot" /><div><strong>Motor IA operativo</strong><small>Última sincronización hace 2 min</small></div></div><div className="user-card"><div className="avatar">LM</div><div><strong>Laura Martín</strong><small>Administradora</small></div><i className="bi bi-three-dots-vertical" /></div></div>
-</aside> }
-
-function Header({ onCopilot }) { const location = useLocation(); const title = location.pathname === '/' ? 'Buenos días, Laura' : nav.find(x => x.to === location.pathname)?.label || 'Detalle de operación'; return <header className="topbar"><div><div className="breadcrumb">SMART WAREHOUSE <span>/</span> OPERACIONES</div><h1>{title}</h1></div><div className="top-actions"><button className="icon-btn" title="Buscar"><i className="bi bi-search" /></button><button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button><button className="copilot-btn" onClick={onCopilot}><i className="bi bi-stars" /> Preguntar al Copilot</button></div></header> }
+function Header({ onCopilot }) { const location = useLocation(); const title = location.pathname === '/' ? 'Buenos días, Laura' : nav.find(x => x.to === location.pathname)?.label || 'Detalle de operación'; return <header className="topbar"><div className="container"><div className="row align-items-center gy-3"><div className="col-12 col-xl-3"><NavLink to="/" className="top-brand"><span className="brand-mark"><i className="bi bi-boxes" /></span><span><strong>smart<span>warehouse</span></strong><small>CONTROL CENTER</small></span></NavLink></div><div className="col-12 col-xl-7"><nav className="top-menu nav nav-pills">{nav.map(item => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}><i className={`bi ${item.icon}`} /><span>{item.label}</span>{item.count && <em>{item.count}</em>}</NavLink>)}</nav></div><div className="col-12 col-xl-2"><div className="top-actions justify-content-xl-end"><button className="icon-btn" title="Buscar"><i className="bi bi-search" /></button><button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button><button className="copilot-btn" onClick={onCopilot}><i className="bi bi-stars" /> Copilot</button></div></div></div><div className="row"><div className="col-12"><div className="breadcrumb">SMART WAREHOUSE <span>/</span> OPERACIONES</div><h1>{title}</h1></div></div></div></header> }
 
 const PageTitle = ({ eyebrow, title, children }) => <div className="page-title"><div><div className="eyebrow">{eyebrow}</div><h2>{title}</h2></div><div className="page-actions">{children}</div></div>
 const Button = ({ children, primary = false }) => <button className={primary ? 'btn-main' : 'btn-ghost'}>{children}</button>

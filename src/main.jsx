@@ -5,6 +5,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import './styles.css'
 import './detail.css'
+import './topnav.css'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(
