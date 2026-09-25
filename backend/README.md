@@ -1,6 +1,6 @@
 # Backend · Smart Warehouse
 
-Base de Fase 2 preparada con arquitectura hexagonal. La API aún no se activa en la demo de Fase 1; los adaptadores de React consumen `src/adapters/mockWarehouseRepository.js` y podrán cambiar a HTTP sin tocar las pantallas.
+Base de Fase 2 preparada con arquitectura hexagonal. La demo React consume esta API REST; las pantallas dependen de un repositorio de aplicación y no de MySQL ni de datos mock embebidos.
 
 La integración prevista es **React → FastAPI REST → casos de uso → repositorios MySQL**. Ningún código del frontend tendrá credenciales ni conexión directa a MySQL. En AWS, FastAPI será desplegado detrás de un balanceador/API Gateway y MySQL permanecerá en una red privada.
 
@@ -52,8 +52,20 @@ Endpoints iniciales:
 - `GET /api/v1/dashboard`
 - `GET /api/v1/orders?status=pending`
 - `GET /api/v1/orders/{external_id}`
+- `POST /api/v1/orders` — crea un pedido pendiente y registra su decisión determinista.
+- `POST /api/v1/imports/orders` — importa pedidos desde `.csv` o `.xlsx`.
 - `POST /api/v1/orders/{external_id}/validate`
 - `GET /api/v1/stock`
 - `GET /api/v1/suppliers`
 - `GET /api/v1/documents/invoices`
 - `GET /api/v1/events?limit=50`
+
+## Plantilla de importación de pedidos
+
+La plantilla versionada está en `backend/templates/order_import_columns.csv`. La primera fila debe contener estas columnas:
+
+```text
+external_order_id,sku,product_description,quantity,unit_price,currency,supplier_code,requested_by,requested_at,required_procedure_code
+```
+
+Son obligatorias `sku`, `quantity`, `unit_price` y `supplier_code`; el resto permite conservar trazabilidad documental y podrá ampliarse sin acoplar el frontend al formato concreto del proveedor. El endpoint devuelve filas importadas y errores por fila para revisión humana.

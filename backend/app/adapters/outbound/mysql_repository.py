@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from collections.abc import Sequence
 from typing import Any
 
@@ -163,3 +164,55 @@ class MySQLWarehouseRepository:
         finally:
             cursor.close()
             connection.close()
+
+    def create_order(self, payload: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            external_id = payload.get("external_order_id") or f"PED-LOCAL-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            requester_email = payload.get("requester_email", "laura.martin@smartwarehouse.local")
+            cursor.execute("SELECT id FROM users WHERE email = %s LIMIT 1", (requester_email,))
+            requester = cursor.fetchone()
+            cursor.execute("SELECT id FROM suppliers WHERE code = %s LIMIT 1", (payload["supplier_code"],))
+            supplier = cursor.fetchone()
+            cursor.execute("SELECT id FROM warehouses WHERE code = %s LIMIT 1", (payload.get("warehouse_code", "MAD-01"),))
+            warehouse = cursor.fetchone()
+            cursor.execute("SELECT id FROM products WHERE sku = %s LIMIT 1", (payload["sku"],))
+            product = cursor.fetchone()
+            if not all([requester, supplier, warehouse, product]):
+                raise ValueError("requester_email, supplier_code, warehouse_code or sku not found")
+
+            quantity = float(payload["quantity"])
+            unit_price = float(payload["unit_price"])
+            total = round(quantity * unit_price, 2)
+            cursor.execute(
+                """INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+                   VALUES (%s, 'purchase_request', 'pending', 'yellow', %s, %s, %s, %s, %s, %s, NOW())
+                   ON DUPLICATE KEY UPDATE total = VALUES(total), updated_at = CURRENT_TIMESTAMP""",
+                (external_id, requester["id"], supplier["id"], warehouse["id"], round(total / 1.21, 2), round(total - total / 1.21, 2), total),
+            )
+            cursor.execute("SELECT id FROM orders WHERE external_id = %s", (external_id,))
+            order = cursor.fetchone()
+            cursor.execute(
+                """INSERT INTO order_lines (order_id, product_id, requested_quantity, unit_price, line_total)
+                   VALUES (%s, %s, %s, %s, %s)
+                   ON DUPLICATE KEY UPDATE requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
+                (order["id"], product["id"], quantity, unit_price, total),
+            )
+            connection.commit()
+            return {"external_id": external_id, "status": "pending", "risk": "yellow", "total": total}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+    def import_orders(self, rows: list[dict]) -> dict:
+        imported, errors = [], []
+        for index, row in enumerate(rows, start=2):
+            try:
+                imported.append(self.create_order(row))
+            except Exception as error:
+                errors.append({"row": index, "message": str(error)})
+        return {"imported": imported, "imported_count": len(imported), "errors": errors, "error_count": len(errors)}

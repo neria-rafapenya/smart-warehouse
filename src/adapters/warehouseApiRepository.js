@@ -6,6 +6,12 @@ async function get(path) {
   return response.json()
 }
 
+async function send(path, options) {
+  const response = await fetch(`${API_BASE_URL}${path}`, options)
+  if (!response.ok) throw new Error(await response.text())
+  return response.json()
+}
+
 const euro = value => `${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`
 const dateLabel = value => value ? new Date(value).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
 
@@ -39,6 +45,8 @@ function mapReceipt(item) {
 }
 
 export const warehouseRepository = {
+  createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
   async loadAll() {
     const [dashboard, orders, stock, suppliers, invoices, events, receipts] = await Promise.all([
       get('/dashboard'), get('/orders'), get('/stock'), get('/suppliers'), get('/documents/invoices'), get('/events?limit=100'), get('/receipts'),
