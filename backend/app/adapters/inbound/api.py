@@ -63,6 +63,10 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     def invoices(current: Annotated[WarehouseService, Depends(service)]):
         return current.invoices()
 
+    @router.get("/receipts", tags=["receiving"])
+    def receipts(current: Annotated[WarehouseService, Depends(service)]):
+        return current.receipts()
+
     @router.get("/events", tags=["events"])
     def events(current: Annotated[WarehouseService, Depends(service)], limit: int = Query(default=50, ge=1, le=200)):
         return current.events(limit=limit)

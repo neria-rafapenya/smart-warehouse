@@ -38,6 +38,8 @@ docs/             decisiones y arquitectura evolutiva
 - Stock, recepción/capacidad, proveedores, facturas y eventos.
 - Copilot visible con respuestas mock deterministas.
 
+La fuente de datos del frontend ya no está en mocks locales: consume FastAPI REST, que lee MySQL. El seed determinista de backend permite reconstruir el escenario completo.
+
 ### Fase 2 · Ecosistema local
 
 - Base MySQL `smart_warehouse` creada con migración y seed inicial.

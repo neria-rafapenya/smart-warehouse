@@ -1,10 +1,5 @@
-import { warehouseRepository } from '../adapters/mockWarehouseRepository'
+import { warehouseRepository } from '../adapters/warehouseApiRepository'
 
 export const warehouseService = {
-  loadDashboard: () => warehouseRepository.getDashboard(),
-  loadOrders: () => warehouseRepository.getOrders(),
-  loadStock: () => warehouseRepository.getStock(),
-  loadSuppliers: () => warehouseRepository.getSuppliers(),
-  loadInvoices: () => warehouseRepository.getInvoices(),
-  loadEvents: () => warehouseRepository.getEvents(),
+  loadAll: () => warehouseRepository.loadAll(),
 }

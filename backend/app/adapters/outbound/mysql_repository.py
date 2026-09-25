@@ -123,6 +123,21 @@ class MySQLWarehouseRepository:
             """
         )
 
+    def list_receipts(self) -> Sequence[dict]:
+        return self._fetch_all(
+            """
+            SELECT gr.receipt_number, gr.dock_code, gr.status, gr.expected_at,
+                   o.external_id, s.legal_name AS supplier, p.description AS product,
+                   ol.requested_quantity AS quantity
+            FROM goods_receipts gr
+            LEFT JOIN orders o ON o.id = gr.order_id
+            LEFT JOIN suppliers s ON s.id = o.supplier_id
+            LEFT JOIN order_lines ol ON ol.order_id = o.id
+            LEFT JOIN products p ON p.id = ol.product_id
+            ORDER BY gr.expected_at
+            """
+        )
+
     def list_events(self, limit: int = 50) -> Sequence[dict]:
         safe_limit = max(1, min(limit, 200))
         return self._fetch_all(

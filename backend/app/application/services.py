@@ -10,12 +10,13 @@ class WarehouseService:
         self.repository = repository
 
     def dashboard(self) -> dict:
+        pending_orders = list(self.repository.list_orders(status="pending"))
         return {
-            "orders_pending": self.repository.count("orders"),
+            "orders_pending": len(pending_orders),
             "stock_items": self.repository.count("stock_items"),
             "active_suppliers": self.repository.count("suppliers"),
             "unread_notifications": self.repository.count("notifications"),
-            "orders": list(self.repository.list_orders(status="pending")),
+            "orders": pending_orders,
             "stock": list(self.repository.list_stock()),
             "events": list(self.repository.list_events(limit=10)),
         }
@@ -49,6 +50,9 @@ class WarehouseService:
 
     def invoices(self) -> list[dict]:
         return list(self.repository.list_invoices())
+
+    def receipts(self) -> list[dict]:
+        return list(self.repository.list_receipts())
 
     def events(self, limit: int = 50) -> list[dict]:
         return list(self.repository.list_events(limit=limit))
