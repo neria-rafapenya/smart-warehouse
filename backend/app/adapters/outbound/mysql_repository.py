@@ -122,7 +122,8 @@ class MySQLWarehouseRepository:
             SELECT i.invoice_number, s.legal_name AS supplier, i.invoice_date,
                    i.total, i.currency, i.status, d.extraction_status, d.confidence,
                    ir.status AS reconciliation_status, ir.confidence AS reconciliation_confidence,
-                   ir.checks_json AS reconciliation_checks
+                   ir.checks_json AS reconciliation_checks, ae.status AS accounting_status,
+                   ae.exported_at, ae.target_system
             FROM invoices i
             LEFT JOIN suppliers s ON s.id = i.supplier_id
             LEFT JOIN documents d ON d.id = i.document_id
@@ -130,7 +131,28 @@ class MySQLWarehouseRepository:
                 SELECT latest.id FROM invoice_reconciliations latest
                 WHERE latest.invoice_id = i.id ORDER BY latest.created_at DESC LIMIT 1
             )
+            LEFT JOIN invoice_accounting_exports ae ON ae.invoice_id = i.id
             ORDER BY i.created_at DESC
+            """
+        )
+
+    def accounting_export_rows(self) -> Sequence[dict]:
+        return self._fetch_all(
+            """
+            SELECT i.invoice_number, i.invoice_date, s.code AS supplier_code,
+                   s.legal_name AS supplier, s.tax_id AS supplier_tax_id,
+                   i.currency, i.subtotal, i.tax_amount, i.total,
+                   ae.status AS accounting_status, ae.target_system,
+                   ir.status AS reconciliation_status, o.external_id AS order_number,
+                   gr.receipt_number
+            FROM invoices i
+            JOIN suppliers s ON s.id = i.supplier_id
+            JOIN invoice_accounting_exports ae ON ae.invoice_id = i.id
+            LEFT JOIN invoice_reconciliations ir ON ir.invoice_id = i.id
+            LEFT JOIN orders o ON o.id = ir.order_id
+            LEFT JOIN goods_receipts gr ON gr.id = ir.receipt_id
+            WHERE ae.status IN ('exportable', 'exported')
+            ORDER BY i.invoice_date, i.invoice_number
             """
         )
 
@@ -362,6 +384,41 @@ class MySQLWarehouseRepository:
                 )
             connection.commit()
             return {"invoice_number": invoice["invoice_number"], "status": status, "confidence": confidence, "order": order.get("external_id") if order else None, "receipt": receipt.get("receipt_number") if receipt else None, "checks": checks}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+    def mark_invoice_exported(self, invoice_number: str, export_format: str, target_system: str) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """SELECT i.id, i.invoice_number, ae.status
+                   FROM invoices i JOIN invoice_accounting_exports ae ON ae.invoice_id = i.id
+                   WHERE i.invoice_number = %s LIMIT 1""",
+                (invoice_number,),
+            )
+            invoice = cursor.fetchone()
+            if not invoice:
+                raise ValueError(f"Factura no disponible para exportación: {invoice_number}")
+            if invoice["status"] == "pending":
+                raise ValueError("La factura todavía no es exportable")
+            cursor.execute(
+                """UPDATE invoice_accounting_exports
+                   SET status = 'exported', export_format = %s, target_system = %s,
+                       external_reference = %s, exported_at = NOW(), payload_json = JSON_OBJECT('adapter', 'rest', 'target_system', %s)
+                   WHERE invoice_id = %s""",
+                (export_format, target_system, f"{target_system}:{invoice_number}", target_system, invoice["id"]),
+            )
+            cursor.execute(
+                "INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload) VALUES ('accounting.exported', 'info', 'invoice', %s, 'system', %s)",
+                (invoice_number, json.dumps({"format": export_format, "target_system": target_system}, ensure_ascii=False)),
+            )
+            connection.commit()
+            return {"invoice_number": invoice_number, "status": "exported", "format": export_format, "target_system": target_system, "external_reference": f"{target_system}:{invoice_number}"}
         except Exception:
             connection.rollback()
             raise

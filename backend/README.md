@@ -31,6 +31,7 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/002_seed_mock_data.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/003_seed_abundant_deterministic_data.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/004_invoice_reconciliation.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/005_accounting_exports.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -61,6 +62,8 @@ Endpoints iniciales:
 - `GET /api/v1/documents/invoices`
 - `POST /api/v1/documents/invoices` — recibe una factura PDF, extrae sus campos y la guarda en almacenamiento local.
 - `POST /api/v1/documents/invoices/{invoice_number}/reconcile` — ejecuta la conciliación automática de factura, pedido y recepción.
+- `GET /api/v1/documents/invoices/accounting-export?format=csv|xlsx` — descarga el fichero contable normalizado.
+- `POST /api/v1/documents/invoices/{invoice_number}/accounting-export` — envía la factura al adaptador REST contable y la marca como `exported`.
 - `GET /api/v1/documents/procedures` — resumen de procedimientos obligatorios pendientes.
 - `GET /api/v1/orders/{external_id}/procedures` — estado documental de un pedido.
 - `POST /api/v1/orders/{external_id}/procedures/{procedure_code}/documents` — adjunta el documento obligatorio a un pedido.
@@ -77,6 +80,10 @@ El resultado conserva trazabilidad en `documents.extracted_json`: origen de extr
 ## Conciliación automática
 
 Al registrar una factura se lanza una conciliación determinista de tres vías. Se busca el pedido del mismo proveedor y se comparan proveedor, líneas y cantidades si la factura contiene líneas estructuradas, impuestos y total. Después se localiza la recepción vinculada al pedido y se comprueba que las cantidades recibidas cubren las esperadas. El resultado se persiste en `invoice_reconciliations`, se registra en auditoría y las diferencias generan una notificación para revisión humana.
+
+## Exportación contable
+
+La tabla `invoice_accounting_exports` controla el ciclo `pending → exportable → exported`. El fichero CSV/Excel utiliza un contrato normalizado con número y fecha de factura, proveedor, NIF, moneda, subtotal, impuestos, total, pedido, recepción y estados de conciliación. La llamada de envío actual es un adaptador REST local determinista: deja registrada la referencia externa y el sistema destino, preparado para sustituirlo por el endpoint del software contable corporativo sin acoplar el frontend ni los casos de uso.
 
 Los archivos se guardan únicamente en local bajo `backend/storage/local/`, excluido de Git. En AWS esta misma interfaz se sustituirá por un adaptador de objetos, previsiblemente S3, sin cambiar los casos de uso ni la API.
 

@@ -31,7 +31,8 @@ function mapSupplier(item) {
 
 function mapInvoice(item) {
   const reconciliationStatus = item.reconciliation_status === 'matched' ? 'Conciliada' : item.reconciliation_status ? 'Revisar conciliación' : 'Pendiente conciliar'
-  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar', reconciliationStatus, reconciliationTone: item.reconciliation_status === 'matched' ? 'success' : 'warning' }
+  const accountingStatus = item.accounting_status === 'exported' ? 'Exportado' : item.accounting_status === 'exportable' ? 'Exportable' : 'Pendiente'
+  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar', reconciliationStatus, reconciliationTone: item.reconciliation_status === 'matched' ? 'success' : 'warning', accountingStatus, accountingTone: item.accounting_status === 'exported' ? 'success' : item.accounting_status === 'exportable' ? 'info' : 'warning' }
 }
 
 function mapProcedure(item) {
@@ -58,6 +59,8 @@ export const warehouseRepository = {
   importOrders: file => { const form = new FormData(); form.append('file', file); return send('/imports/orders', { method: 'POST', body: form }) },
   uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
   reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
+  exportInvoice: (invoiceNumber, targetSystem = 'corporate-accounting-rest') => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/accounting-export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_system: targetSystem }) }),
+  downloadAccountingExport: async format => { const response = await fetch(`${API_BASE_URL}/documents/invoices/accounting-export?format=${format}`); if (!response.ok) throw new Error(`API ${response.status}: exportación contable`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-accounting.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   async loadAll() {

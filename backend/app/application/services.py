@@ -54,6 +54,12 @@ class WarehouseService:
     def reconcile_invoice(self, invoice_number: str) -> dict:
         return self.repository.reconcile_invoice(invoice_number)
 
+    def accounting_export_rows(self) -> list[dict]:
+        return list(self.repository.accounting_export_rows())
+
+    def mark_invoice_exported(self, invoice_number: str, export_format: str, target_system: str) -> dict:
+        return self.repository.mark_invoice_exported(invoice_number, export_format, target_system)
+
     def procedures(self, external_id: str | None = None) -> list[dict]:
         return list(self.repository.list_procedures(external_id=external_id))
 

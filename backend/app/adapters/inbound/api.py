@@ -8,6 +8,7 @@ from typing import Annotated, Callable
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from openpyxl import load_workbook
 from pypdf import PdfReader
 from pydantic import BaseModel, Field
@@ -38,6 +39,10 @@ class CreateOrderRequest(BaseModel):
     external_order_id: str | None = None
 
 
+class AccountingExportRequest(BaseModel):
+    target_system: str = "corporate-accounting-rest"
+
+
 def _amount(value: str) -> float | None:
     normalized = value.replace("€", "").replace("EUR", "").replace(" ", "").strip()
     if not normalized:
@@ -50,6 +55,37 @@ def _amount(value: str) -> float | None:
         return round(float(normalized), 2)
     except ValueError:
         return None
+
+
+def _accounting_file(rows: list[dict], export_format: str) -> tuple[bytes, str, str]:
+    columns = [
+        ("invoice_number", "invoice_number"), ("invoice_date", "invoice_date"),
+        ("supplier_code", "supplier_code"), ("supplier", "supplier"),
+        ("supplier_tax_id", "supplier_tax_id"), ("currency", "currency"),
+        ("subtotal", "subtotal"), ("tax_amount", "tax_amount"), ("total", "total"),
+        ("accounting_status", "accounting_status"), ("reconciliation_status", "reconciliation_status"),
+        ("order_number", "order_number"), ("receipt_number", "receipt_number"),
+    ]
+    labels = [label for label, _ in columns]
+    if export_format == "csv":
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=labels, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({label: row.get(key) for label, key in columns})
+        return output.getvalue().encode("utf-8-sig"), "text/csv; charset=utf-8", "smart-warehouse-accounting.csv"
+    from openpyxl import Workbook
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Facturas"
+    sheet.append(labels)
+    for row in rows:
+        sheet.append([row.get(key) for _, key in columns])
+    for cell in sheet[1]:
+        cell.font = cell.font.copy(bold=True)
+    stream = io.BytesIO()
+    workbook.save(stream)
+    return stream.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "smart-warehouse-accounting.xlsx"
 
 
 def _ocr_pdf(content: bytes) -> tuple[str, dict]:
@@ -237,6 +273,18 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
             return current.reconcile_invoice(invoice_number)
         except ValueError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @router.get("/documents/invoices/accounting-export", tags=["documents"])
+    def accounting_export(format: str = Query(default="csv", pattern="^(csv|xlsx)$"), current: WarehouseService = Depends(service)):
+        payload, media_type, filename = _accounting_file(current.accounting_export_rows(), format)
+        return StreamingResponse(io.BytesIO(payload), media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+    @router.post("/documents/invoices/{invoice_number}/accounting-export", tags=["documents"])
+    def export_invoice(invoice_number: str, request: AccountingExportRequest, current: Annotated[WarehouseService, Depends(service)]):
+        try:
+            return current.mark_invoice_exported(invoice_number, "rest", request.target_system)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
     @router.get("/documents/procedures", tags=["documents"])
     def procedures(current: Annotated[WarehouseService, Depends(service)]):
