@@ -37,6 +37,63 @@ class MySQLWarehouseRepository:
             cursor.close()
             connection.close()
 
+    def authenticate_user(self, email: str) -> dict | None:
+        rows = self._fetch_all(
+            """SELECT u.id, u.full_name, u.email, u.role, u.active, u.password_hash,
+                      GROUP_CONCAT(DISTINCT p.code) AS permissions,
+                      GROUP_CONCAT(DISTINCT w.code) AS warehouses
+               FROM users u
+               LEFT JOIN role_permissions rp ON rp.role = u.role
+               LEFT JOIN permissions p ON p.id = rp.permission_id
+               LEFT JOIN user_warehouses uw ON uw.user_id = u.id
+               LEFT JOIN warehouses w ON w.id = uw.warehouse_id
+               WHERE LOWER(u.email) = LOWER(%s)
+               GROUP BY u.id LIMIT 1""",
+            (email,),
+        )
+        if not rows:
+            return None
+        user = rows[0]
+        user["permissions"] = [item for item in (user.get("permissions") or "").split(",") if item]
+        user["warehouses"] = [item for item in (user.get("warehouses") or "").split(",") if item]
+        return user
+
+    def get_user(self, user_id: int) -> dict | None:
+        rows = self._fetch_all(
+            """SELECT u.id, u.full_name, u.email, u.role, u.active,
+                      GROUP_CONCAT(DISTINCT p.code) AS permissions,
+                      GROUP_CONCAT(DISTINCT w.code) AS warehouses
+               FROM users u
+               LEFT JOIN role_permissions rp ON rp.role = u.role
+               LEFT JOIN permissions p ON p.id = rp.permission_id
+               LEFT JOIN user_warehouses uw ON uw.user_id = u.id
+               LEFT JOIN warehouses w ON w.id = uw.warehouse_id
+               WHERE u.id = %s GROUP BY u.id LIMIT 1""",
+            (user_id,),
+        )
+        if not rows:
+            return None
+        user = rows[0]
+        user["permissions"] = [item for item in (user.get("permissions") or "").split(",") if item]
+        user["warehouses"] = [item for item in (user.get("warehouses") or "").split(",") if item]
+        return user
+
+    def record_user_login(self, user_id: int, success: bool, email: str) -> None:
+        connection = self._connect()
+        cursor = connection.cursor()
+        try:
+            payload = json.dumps({"email": email, "success": success}, ensure_ascii=False)
+            cursor.execute(
+                """INSERT INTO audit_events
+                   (event_type, severity, aggregate_type, aggregate_id, actor_type, actor_id, payload)
+                   VALUES (%s, %s, 'user', %s, 'user', %s, %s)""",
+                ("auth.login" if success else "auth.login_failed", "info" if success else "warning", str(user_id), user_id, payload),
+            )
+            connection.commit()
+        finally:
+            cursor.close()
+            connection.close()
+
     def count(self, table: str) -> int:
         allowed = {"orders", "stock_items", "suppliers", "notifications"}
         if table not in allowed:

@@ -1,6 +1,8 @@
 import { warehouseRepository } from '../adapters/warehouseApiRepository'
 
 export const warehouseService = {
+  login: (email, password) => warehouseRepository.login(email, password),
+  me: () => warehouseRepository.me(),
   loadAll: () => warehouseRepository.loadAll(),
   createOrder: payload => warehouseRepository.createOrder(payload),
   importOrders: file => warehouseRepository.importOrders(file),
@@ -12,4 +14,8 @@ export const warehouseService = {
   createStockMovement: payload => warehouseRepository.createStockMovement(payload),
   uploadProcedureDocument: (externalId, procedureCode, file) => warehouseRepository.uploadProcedureDocument(externalId, procedureCode, file),
   validateOrder: externalId => warehouseRepository.validateOrder(externalId),
+  aiChat: message => warehouseRepository.aiChat(message),
+  aiSuggestions: () => warehouseRepository.aiSuggestions(),
+  aiAnomalies: () => warehouseRepository.aiAnomalies(),
+  runAIAnomalies: () => warehouseRepository.runAIAnomalies(),
 }

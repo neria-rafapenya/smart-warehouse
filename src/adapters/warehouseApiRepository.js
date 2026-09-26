@@ -1,15 +1,20 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1'
 
 async function get(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`)
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers: authHeaders() })
   if (!response.ok) throw new Error(`API ${response.status}: ${path}`)
   return response.json()
 }
 
 async function send(path, options) {
-  const response = await fetch(`${API_BASE_URL}${path}`, options)
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { ...authHeaders(), ...(options?.headers || {}) } })
   if (!response.ok) throw new Error(await response.text())
   return response.json()
+}
+
+function authHeaders() {
+  const token = localStorage.getItem('smart_warehouse_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 const euro = value => `${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`
@@ -69,14 +74,20 @@ function mapMovement(item) {
 }
 
 export const warehouseRepository = {
+  login: (email, password) => send('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }),
+  me: () => get('/auth/me'),
+  aiChat: message => send('/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }),
+  aiSuggestions: () => get('/ai/suggestions'),
+  aiAnomalies: () => get('/ai/anomalies'),
+  runAIAnomalies: () => send('/ai/anomalies/run', { method: 'POST' }),
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   previewOrderImport: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'false'); return send('/imports/orders', { method: 'POST', body: form }) },
   importOrders: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'true'); return send('/imports/orders', { method: 'POST', body: form }) },
   uploadInvoice: file => { const form = new FormData(); form.append('file', file); return send('/documents/invoices', { method: 'POST', body: form }) },
   reconcileInvoice: invoiceNumber => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/reconcile`, { method: 'POST' }),
   exportInvoice: (invoiceNumber, targetSystem = 'corporate-accounting-rest') => send(`/documents/invoices/${encodeURIComponent(invoiceNumber)}/accounting-export`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_system: targetSystem }) }),
-  downloadAccountingExport: async format => { const response = await fetch(`${API_BASE_URL}/documents/invoices/accounting-export?format=${format}`); if (!response.ok) throw new Error(`API ${response.status}: exportación contable`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-accounting.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
-  downloadEventsExport: async (format, filters = {}) => { const query = new URLSearchParams({ format, ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value && value !== 'all')) }); const response = await fetch(`${API_BASE_URL}/events/export?${query}`); if (!response.ok) throw new Error(`API ${response.status}: exportación de eventos`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-events.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
+  downloadAccountingExport: async format => { const response = await fetch(`${API_BASE_URL}/documents/invoices/accounting-export?format=${format}`, { headers: authHeaders() }); if (!response.ok) throw new Error(`API ${response.status}: exportación contable`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-accounting.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
+  downloadEventsExport: async (format, filters = {}) => { const query = new URLSearchParams({ format, ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value && value !== 'all')) }); const response = await fetch(`${API_BASE_URL}/events/export?${query}`, { headers: authHeaders() }); if (!response.ok) throw new Error(`API ${response.status}: exportación de eventos`); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `smart-warehouse-events.${format === 'xlsx' ? 'xlsx' : 'csv'}`; link.click(); URL.revokeObjectURL(url) },
   getEvent: eventId => get(`/events/${eventId}`),
   readAlert: alertId => send(`/alerts/${alertId}/read`, { method: 'POST' }),
   readAllAlerts: () => send('/alerts/read-all', { method: 'POST' }),

@@ -8,7 +8,7 @@ import tempfile
 from typing import Annotated, Callable
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import load_workbook
 from pypdf import PdfReader
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from ...application.services import WarehouseService
 from ...application.ai_service import AIService
+from ...application.auth import create_token, decode_token, verify_password
 from ...domain.errors import OrderNotFoundError
 
 
@@ -89,6 +90,11 @@ class AlertRuleRequest(BaseModel):
 
 class AIChatRequest(BaseModel):
     message: str = Field(min_length=2, max_length=2000)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+    password: str = Field(min_length=4, max_length=128)
 
 
 def _amount(value: str) -> float | None:
@@ -287,7 +293,7 @@ def _extract_invoice(content: bytes) -> dict:
     return extracted
 
 
-def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None) -> APIRouter:
+def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None, auth_repository_provider: Callable[[], object] | None = None, auth_secret: str = "local-only-change-before-production", auth_token_ttl_seconds: int = 28800) -> APIRouter:
     router = APIRouter()
 
     def service() -> WarehouseService:
@@ -297,6 +303,32 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         if ai_service_provider is None:
             raise HTTPException(status_code=503, detail="Proveedor de IA no configurado")
         return ai_service_provider()
+
+    @router.post("/auth/login", tags=["auth"])
+    def login(request: LoginRequest):
+        if auth_repository_provider is None:
+            raise HTTPException(status_code=503, detail="Autenticación no configurada")
+        repository = auth_repository_provider()
+        user = repository.authenticate_user(request.email)
+        if not user or not user.get("active") or not verify_password(request.password, user.get("password_hash") or ""):
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        repository.record_user_login(int(user["id"]), True, request.email)
+        token = create_token(user, auth_secret, auth_token_ttl_seconds)
+        user.pop("password_hash", None)
+        return {"access_token": token, "token_type": "bearer", "expires_in": auth_token_ttl_seconds, "user": user}
+
+    @router.get("/auth/me", tags=["auth"])
+    def auth_me(request: Request):
+        authorization = request.headers.get("Authorization", "")
+        token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
+        claims = decode_token(token, auth_secret)
+        if not claims or auth_repository_provider is None:
+            raise HTTPException(status_code=401, detail="Sesión no válida")
+        user = auth_repository_provider().get_user(int(claims["sub"]))
+        if not user or not user.get("active"):
+            raise HTTPException(status_code=401, detail="Usuario no disponible")
+        user.pop("password_hash", None)
+        return user
 
     @router.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:

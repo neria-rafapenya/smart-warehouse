@@ -146,3 +146,14 @@ external_order_id,sku,product_description,quantity,unit_price,currency,supplier_
 Son obligatorias `sku`, `quantity`, `unit_price` y `supplier_code`; el resto permite conservar trazabilidad documental y podrá ampliarse sin acoplar el frontend al formato concreto del proveedor. El endpoint devuelve filas importadas y errores por fila para revisión humana.
 
 La importación se realiza en dos pasos: primero devuelve una vista previa con validación de columnas, filas válidas y duplicados contra MySQL; después `confirm=true` importa únicamente las filas válidas. La interfaz permite descargar el informe CSV de errores antes de confirmar.
+## Autenticación y permisos locales
+
+La migración `010_auth_permissions.sql` añade credenciales locales, permisos funcionales y asignación de usuarios a almacenes. La API usa tokens firmados localmente para la demo y bloquea las rutas según el permiso requerido (`warehouse`, `purchasing`, `administration`, `ai` y `audit`). Las acciones de autenticación y los eventos de negocio quedan preparados para identificar al usuario.
+
+Ejecutar después de las migraciones anteriores:
+
+```bash
+mysql -u root -proot smart_warehouse < migrations/010_auth_permissions.sql
+```
+
+Usuario demo: `laura.martin@smartwarehouse.local` / `demo1234`. Antes de cualquier entorno compartido hay que sustituir la contraseña demo y `AUTH_SECRET` en `.env`.
