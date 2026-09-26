@@ -149,7 +149,7 @@ class MySQLWarehouseRepository:
 
     def transition_order_status(self, external_id: str, to_status: str, reason: str | None = None) -> dict:
         allowed = {
-            "pending": {"validated"}, "human_review": {"validated", "pending"}, "blocked": {"pending"},
+            "pending": set(), "human_review": set(), "blocked": {"pending"},
             "validated": {"approved", "pending"}, "approved": {"sent_to_supplier"},
             "sent_to_supplier": {"received"}, "received": {"closed"}, "closed": set(),
         }
