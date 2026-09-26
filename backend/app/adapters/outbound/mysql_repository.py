@@ -653,8 +653,8 @@ class MySQLWarehouseRepository:
             procedure = cursor.fetchone()
             if not order or not procedure:
                 raise ValueError("Pedido o procedimiento obligatorio no encontrado")
-            if order.get("status") != "pending":
-                raise ValueError("La documentación obligatoria debe completarse antes de ejecutar la validación")
+            if order.get("status") not in {"pending", "validated"}:
+                raise ValueError("La documentación obligatoria solo puede completarse antes de aprobar el pedido")
             cursor.execute(
                 """INSERT INTO documents (document_type, original_filename, storage_key, mime_type, extraction_status, confidence, uploaded_by)
                    VALUES ('procedure', %s, %s, %s, 'not_applicable', 1.0000, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
