@@ -903,6 +903,19 @@ class MySQLWarehouseRepository:
             if order.get("status") not in {"pending", "human_review"}:
                 raise ValueError("La validación solo puede ejecutarse sobre un pedido pendiente")
             cursor.execute(
+                """SELECT COUNT(*) AS total_required,
+                          SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_required
+                   FROM required_procedures rp
+                   LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = %s
+                   WHERE rp.active = TRUE""",
+                (order["id"],),
+            )
+            documents = cursor.fetchone() or {}
+            total_required = int(documents.get("total_required") or 0)
+            completed_required = int(documents.get("completed_required") or 0)
+            if completed_required < total_required:
+                raise ValueError(f"No se puede validar el pedido: faltan {total_required - completed_required} documentos obligatorios")
+            cursor.execute(
                 "INSERT INTO validation_decisions (order_id, decision_status, risk, confidence, reasons) VALUES (%s, %s, %s, %s, %s)",
                 (order["id"], decision["status"], decision["risk"], 1.0, json.dumps(decision["reasons"], ensure_ascii=False))
             )
