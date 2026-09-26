@@ -14,4 +14,11 @@
 .integration-head h3 { margin: 0; font-size: 16px; }
 .integration-head p { margin: 5px 0 0; color: #7b879c; font-size: 12px; overflow-wrap: anywhere; }
 .integration-meta { display: flex; justify-content: space-between; gap: 12px; color: #7b879c; font-size: 12px; margin: 20px 0 16px; }
+.document-shortcuts { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.document-shortcuts h3 { margin: 4px 0; font-size: 16px; }
+.document-shortcuts p { margin: 0; color: #7b879c; font-size: 13px; }
+.document-shortcut-list { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.document-shortcut-list button { display: flex; align-items: center; gap: 6px; }
+.document-shortcut-list small { color: #7b879c; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .document-shortcuts { align-items: flex-start; flex-direction: column; } .document-shortcut-list { justify-content: flex-start; } }
 @media (max-width: 760px) { .integration-grid { grid-template-columns: 1fr; } }
