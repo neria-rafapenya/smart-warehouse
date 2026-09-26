@@ -425,6 +425,8 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
             return current.validate(external_id)
         except OrderNotFoundError as error:
             raise HTTPException(status_code=404, detail=f"Order {external_id} not found") from error
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
     @router.post("/orders", status_code=201, tags=["orders"])
     def create_order(payload: CreateOrderRequest, current: Annotated[WarehouseService, Depends(service)]):

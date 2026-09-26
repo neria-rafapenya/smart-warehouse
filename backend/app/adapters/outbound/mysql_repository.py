@@ -647,12 +647,14 @@ class MySQLWarehouseRepository:
         connection = self._connect()
         cursor = connection.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT id FROM orders WHERE external_id = %s LIMIT 1", (external_id,))
+            cursor.execute("SELECT id, status FROM orders WHERE external_id = %s LIMIT 1", (external_id,))
             order = cursor.fetchone()
             cursor.execute("SELECT id, name FROM required_procedures WHERE code = %s AND active = TRUE LIMIT 1", (procedure_code,))
             procedure = cursor.fetchone()
             if not order or not procedure:
                 raise ValueError("Pedido o procedimiento obligatorio no encontrado")
+            if order.get("status") != "pending":
+                raise ValueError("La documentación obligatoria debe completarse antes de ejecutar la validación")
             cursor.execute(
                 """INSERT INTO documents (document_type, original_filename, storage_key, mime_type, extraction_status, confidence, uploaded_by)
                    VALUES ('procedure', %s, %s, %s, 'not_applicable', 1.0000, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
@@ -898,6 +900,8 @@ class MySQLWarehouseRepository:
             order = cursor.fetchone()
             if not order:
                 return
+            if order.get("status") not in {"pending", "human_review"}:
+                raise ValueError("La validación solo puede ejecutarse sobre un pedido pendiente")
             cursor.execute(
                 "INSERT INTO validation_decisions (order_id, decision_status, risk, confidence, reasons) VALUES (%s, %s, %s, %s, %s)",
                 (order["id"], decision["status"], decision["risk"], 1.0, json.dumps(decision["reasons"], ensure_ascii=False))
