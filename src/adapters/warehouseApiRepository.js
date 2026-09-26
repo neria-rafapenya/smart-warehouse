@@ -8,7 +8,12 @@ async function get(path) {
 
 async function send(path, options) {
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers: { ...authHeaders(), ...(options?.headers || {}) } })
-  if (!response.ok) throw new Error(await response.text())
+  if (!response.ok) {
+    const body = await response.text()
+    let message = body
+    try { message = JSON.parse(body).detail || body } catch { /* conserva el texto original */ }
+    throw new Error(message)
+  }
   return response.json()
 }
 

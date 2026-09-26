@@ -162,6 +162,42 @@ class MySQLWarehouseRepository:
                 raise ValueError(f"Pedido no encontrado: {external_id}")
             if to_status not in allowed.get(order["status"], set()):
                 raise ValueError(f"Transición no permitida: {order['status']} → {to_status}")
+            if to_status == "approved":
+                cursor.execute(
+                    """SELECT COUNT(*) AS total_required,
+                              SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_required
+                       FROM required_procedures rp
+                       LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = %s
+                       WHERE rp.active = TRUE""",
+                    (order["id"],),
+                )
+                documents = cursor.fetchone() or {}
+                total_required = int(documents.get("total_required") or 0)
+                completed_required = int(documents.get("completed_required") or 0)
+                if completed_required < total_required:
+                    raise ValueError(f"No se puede aprobar el pedido: faltan {total_required - completed_required} documentos obligatorios")
+            if to_status == "received":
+                cursor.execute(
+                    "SELECT COUNT(*) AS total FROM goods_receipts WHERE order_id = %s AND status IN ('received', 'discrepancy', 'complete')",
+                    (order["id"],),
+                )
+                if int((cursor.fetchone() or {}).get("total") or 0) == 0:
+                    raise ValueError("No se puede marcar recibido: registra primero la recepción de almacén")
+            if to_status == "closed":
+                cursor.execute(
+                    "SELECT COUNT(*) AS total FROM goods_receipts WHERE order_id = %s AND status IN ('received', 'discrepancy', 'complete')",
+                    (order["id"],),
+                )
+                if int((cursor.fetchone() or {}).get("total") or 0) == 0:
+                    raise ValueError("No se puede cerrar el pedido: falta la recepción de almacén")
+                cursor.execute(
+                    """SELECT COUNT(*) AS total
+                       FROM invoice_reconciliations ir
+                       WHERE ir.order_id = %s AND ir.status = 'matched'""",
+                    (order["id"],),
+                )
+                if int((cursor.fetchone() or {}).get("total") or 0) == 0:
+                    raise ValueError("No se puede cerrar el pedido: falta una factura conciliada correctamente")
             cursor.execute("UPDATE orders SET status = %s, approved_at = CASE WHEN %s = 'approved' THEN NOW() ELSE approved_at END WHERE id = %s", (to_status, to_status, order["id"]))
             cursor.execute("INSERT INTO order_status_history (order_id, from_status, to_status, reason, created_by) VALUES (%s, %s, %s, %s, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))", (order["id"], order["status"], to_status, reason))
             payload = json.dumps({"from_status": order["status"], "to_status": to_status, "reason": reason}, ensure_ascii=False)
