@@ -22,3 +22,10 @@
 .document-shortcut-list small { color: #7b879c; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 900px) { .document-shortcuts { align-items: flex-start; flex-direction: column; } .document-shortcut-list { justify-content: flex-start; } }
 @media (max-width: 760px) { .integration-grid { grid-template-columns: 1fr; } }
+.workflow-documents { margin: 4px 0 15px; padding: 12px 14px; border: 1px solid #e8edf5; border-radius: 8px; background: #fbfcff; }
+.workflow-documents > div:first-child { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
+.workflow-documents span { color: #6f7d94; }
+.workflow-document-bar { height: 6px; margin-top: 9px; overflow: hidden; border-radius: 99px; background: #e9edf4; }
+.workflow-document-bar > div { height: 100%; min-width: 0; border-radius: inherit; background: #20ae75; transition: width .2s ease; }
+.validation-row .validation-icon.success { color: #168a5a; background: #e7f8ef; }
+.validation-row .validation-icon.warning { color: #b8790a; background: #fff5df; }
