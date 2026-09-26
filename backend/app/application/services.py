@@ -60,6 +60,9 @@ class WarehouseService:
     def suppliers(self) -> list[dict]:
         return list(self.repository.list_suppliers())
 
+    def product_offers(self, sku: str) -> list[dict]:
+        return list(self.repository.list_product_offers(sku))
+
     def invoices(self) -> list[dict]:
         return list(self.repository.list_invoices())
 

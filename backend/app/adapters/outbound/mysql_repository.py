@@ -281,6 +281,20 @@ class MySQLWarehouseRepository:
             """
         )
 
+    def list_product_offers(self, sku: str) -> Sequence[dict]:
+        return self._fetch_all(
+            """SELECT p.sku, p.description AS product, s.code AS supplier_code,
+                      s.legal_name AS supplier, sp.supplier_sku, sp.unit_cost,
+                      sp.currency, sp.minimum_order_quantity, sp.lead_time_days,
+                      sp.is_preferred
+               FROM supplier_products sp
+               JOIN products p ON p.id = sp.product_id
+               JOIN suppliers s ON s.id = sp.supplier_id
+               WHERE p.sku = %s AND s.status <> 'blocked'
+               ORDER BY sp.is_preferred DESC, sp.unit_cost, s.legal_name""",
+            (sku,),
+        )
+
     def list_invoices(self) -> Sequence[dict]:
         return self._fetch_all(
             """
@@ -966,8 +980,17 @@ class MySQLWarehouseRepository:
             if not all([requester, supplier, warehouse, product]):
                 raise ValueError("requester_email, supplier_code, warehouse_code or sku not found")
 
+            cursor.execute(
+                """SELECT supplier_sku, unit_cost, currency FROM supplier_products
+                   WHERE supplier_id = %s AND product_id = %s LIMIT 1""",
+                (supplier["id"], product["id"]),
+            )
+            offer = cursor.fetchone()
+            if not offer:
+                raise ValueError("El producto no tiene una oferta configurada para el proveedor seleccionado")
+
             quantity = float(payload["quantity"])
-            unit_price = float(payload["unit_price"])
+            unit_price = float(offer["unit_cost"])
             total = round(quantity * unit_price, 2)
             cursor.execute(
                 """INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
@@ -978,10 +1001,10 @@ class MySQLWarehouseRepository:
             cursor.execute("SELECT id FROM orders WHERE external_id = %s", (external_id,))
             order = cursor.fetchone()
             cursor.execute(
-                """INSERT INTO order_lines (order_id, product_id, requested_quantity, unit_price, line_total)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON DUPLICATE KEY UPDATE requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
-                (order["id"], product["id"], quantity, unit_price, total),
+                """INSERT INTO order_lines (order_id, product_id, supplier_sku, requested_quantity, unit_price, line_total)
+                   VALUES (%s, %s, %s, %s, %s, %s)
+                   ON DUPLICATE KEY UPDATE supplier_sku = VALUES(supplier_sku), requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
+                (order["id"], product["id"], offer["supplier_sku"], quantity, unit_price, total),
             )
             cursor.execute(
                 """INSERT INTO order_status_history (order_id, from_status, to_status, reason)

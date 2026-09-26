@@ -83,6 +83,7 @@ export const warehouseRepository = {
   integrations: () => get('/integrations'),
   integrationHealth: () => get('/integrations/health'),
   syncIntegration: (code, direction = 'outbound') => send(`/integrations/${encodeURIComponent(code)}/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction }) }),
+  productOffers: sku => get(`/catalog/products/${encodeURIComponent(sku)}/offers`),
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   previewOrderImport: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'false'); return send('/imports/orders', { method: 'POST', body: form }) },
   importOrders: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'true'); return send('/imports/orders', { method: 'POST', body: form }) },

@@ -36,8 +36,9 @@ class HealthResponse(BaseModel):
 class CreateOrderRequest(BaseModel):
     sku: str
     quantity: float = Field(gt=0)
-    unit_price: float = Field(gt=0)
     supplier_code: str
+    unit_price: float | None = Field(default=None, gt=0)
+    supplier_sku: str | None = None
     warehouse_code: str = "MAD-01"
     requester_email: str = "laura.martin@smartwarehouse.local"
     external_order_id: str | None = None
@@ -462,6 +463,10 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/suppliers", tags=["suppliers"])
     def suppliers(current: Annotated[WarehouseService, Depends(service)]):
         return current.suppliers()
+
+    @router.get("/catalog/products/{sku}/offers", tags=["suppliers"])
+    def product_offers(sku: str, current: Annotated[WarehouseService, Depends(service)]):
+        return current.product_offers(sku)
 
     @router.get("/documents/invoices", tags=["documents"])
     def invoices(current: Annotated[WarehouseService, Depends(service)]):
