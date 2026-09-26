@@ -104,6 +104,7 @@ export const warehouseRepository = {
   createAlertRule: payload => send('/alert-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   updateAlertRule: (ruleId, payload) => send(`/alert-rules/${ruleId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   uploadProcedureDocument: (externalId, procedureCode, file) => { const form = new FormData(); form.append('file', file); return send(`/orders/${externalId}/procedures/${procedureCode}/documents`, { method: 'POST', body: form }) },
+  orderProcedures: externalId => get(`/orders/${externalId}/procedures`),
   validateOrder: externalId => send(`/orders/${externalId}/validate`, { method: 'POST' }),
   transitionOrderStatus: (externalId, status, reason) => send(`/orders/${externalId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, reason }) }),
   orderStatusHistory: externalId => get(`/orders/${externalId}/status-history`),

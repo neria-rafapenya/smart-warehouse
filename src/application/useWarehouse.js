@@ -13,6 +13,7 @@ export const warehouseService = {
   downloadAccountingExport: format => warehouseRepository.downloadAccountingExport(format),
   createStockMovement: payload => warehouseRepository.createStockMovement(payload),
   uploadProcedureDocument: (externalId, procedureCode, file) => warehouseRepository.uploadProcedureDocument(externalId, procedureCode, file),
+  orderProcedures: externalId => warehouseRepository.orderProcedures(externalId),
   validateOrder: externalId => warehouseRepository.validateOrder(externalId),
   transitionOrderStatus: (externalId, status, reason) => warehouseRepository.transitionOrderStatus(externalId, status, reason),
   orderStatusHistory: externalId => warehouseRepository.orderStatusHistory(externalId),
