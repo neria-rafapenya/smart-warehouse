@@ -55,6 +55,6 @@ UPDATE users
 SET password_hash = 'c21hcnQtd2FyZWhvdXNlLWRlbW8tc2FsdA==$btpeoTIgv0bJM4MZCHd4Cy9nFdbo12x2w6vgQlI3E6U='
 WHERE password_hash IS NULL;
 
-INSERT INTO user_warehouses (user_id, warehouse_id)
+INSERT IGNORE INTO user_warehouses (user_id, warehouse_id)
 SELECT u.id, w.id FROM users u CROSS JOIN warehouses w
-ON DUPLICATE KEY UPDATE user_id = VALUES(user_id);
+;
