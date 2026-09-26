@@ -17,6 +17,7 @@ export const warehouseService = {
   validateOrder: externalId => warehouseRepository.validateOrder(externalId),
   transitionOrderStatus: (externalId, status, reason) => warehouseRepository.transitionOrderStatus(externalId, status, reason),
   orderStatusHistory: externalId => warehouseRepository.orderStatusHistory(externalId),
+  createReceipt: payload => warehouseRepository.createReceipt(payload),
   aiChat: message => warehouseRepository.aiChat(message),
   aiSuggestions: () => warehouseRepository.aiSuggestions(),
   aiAnomalies: () => warehouseRepository.aiAnomalies(),
