@@ -52,6 +52,8 @@ Con XAMPP iniciado, ejecutar desde la raíz del proyecto:
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/007_real_receipts.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/008_stock_movements.sql
 /Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/009_order_workflow.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/010_auth_permissions.sql
+/Applications/XAMPP/xamppfiles/bin/mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root < backend/migrations/011_corporate_integrations.sql
 ```
 
 En esta instalación concreta de XAMPP, `root` está configurado sin contraseña; la configuración objetivo del proyecto sigue siendo `MYSQL_PASSWORD=root` y se resolverá mediante `.env` cuando se configure el entorno local definitivo.
@@ -118,6 +120,14 @@ La tabla `invoice_accounting_exports` controla el ciclo `pending → exportable 
 ## Gestión de alertas
 
 La tabla `alert_rules` persiste reglas activas, tipo de evento, gravedad, canales y destinatarios. Las notificaciones pueden filtrarse por gravedad y tipo, marcarse individualmente o en bloque como leídas y quedan auditadas sin eliminar el histórico.
+
+## Integraciones corporativas
+
+La migración `011_corporate_integrations.sql` registra conexiones para ERP, WMS, software contable, APIs de proveedores y EDI. En local se usan adaptadores simulados sin tráfico de red; cada healthcheck y sincronización queda registrado en `integration_sync_runs` y `audit_events`. En producción se podrán sustituir por conectores REST, SOAP, AS2/EDIFACT o adaptadores nativos manteniendo el mismo puerto.
+
+- `GET /api/v1/integrations` — conexiones configuradas.
+- `GET /api/v1/integrations/health` — prueba determinista de disponibilidad.
+- `POST /api/v1/integrations/{code}/sync` — ejecuta una sincronización simulada y audita el resultado.
 
 ## Recepciones reales
 

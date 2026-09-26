@@ -18,4 +18,5 @@ export const warehouseService = {
   aiSuggestions: () => warehouseRepository.aiSuggestions(),
   aiAnomalies: () => warehouseRepository.aiAnomalies(),
   runAIAnomalies: () => warehouseRepository.runAIAnomalies(),
+  syncIntegration: (code, direction) => warehouseRepository.syncIntegration(code, direction),
 }

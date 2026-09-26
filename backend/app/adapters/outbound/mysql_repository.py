@@ -901,6 +901,54 @@ class MySQLWarehouseRepository:
             cursor.close()
             connection.close()
 
+    def list_integrations(self) -> Sequence[dict]:
+        rows = self._fetch_all(
+            """SELECT id, code, name, kind, protocol, status, endpoint,
+                      configuration_json, secret_reference, enabled, updated_at
+               FROM integration_connections ORDER BY name"""
+        )
+        for row in rows:
+            value = row.get("configuration_json")
+            if isinstance(value, str):
+                try:
+                    row["configuration"] = json.loads(value)
+                except json.JSONDecodeError:
+                    row["configuration"] = {}
+            else:
+                row["configuration"] = value or {}
+            row.pop("configuration_json", None)
+        return rows
+
+    def record_integration_sync(self, code: str, direction: str, result: dict) -> dict:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT id FROM integration_connections WHERE code = %s LIMIT 1", (code,))
+            integration = cursor.fetchone()
+            if not integration:
+                raise ValueError(f"Integración no encontrada: {code}")
+            cursor.execute(
+                """INSERT INTO integration_sync_runs
+                   (integration_id, direction, status, records_count, response_json, finished_at)
+                   VALUES (%s, %s, %s, %s, %s, NOW())""",
+                (integration["id"], direction, result.get("status", "unknown"), int(result.get("records", 0)), json.dumps(result, ensure_ascii=False)),
+            )
+            event_payload = json.dumps({"integration": code, "direction": direction, "result": result}, ensure_ascii=False)
+            cursor.execute(
+                """INSERT INTO audit_events
+                   (event_type, severity, aggregate_type, aggregate_id, actor_type, payload)
+                   VALUES ('integration.sync', 'info', 'integration', %s, 'system', %s)""",
+                (code, event_payload),
+            )
+            connection.commit()
+            return {"integration": code, "direction": direction, **result}
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
     def create_order(self, payload: dict) -> dict:
         connection = self._connect()
         cursor = connection.cursor(dictionary=True)

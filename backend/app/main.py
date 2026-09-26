@@ -8,6 +8,7 @@ from .adapters.inbound.api import build_router
 from .adapters.ai.local_provider import LocalDeterministicAIProvider
 from .adapters.outbound.mysql_repository import MySQLWarehouseRepository
 from .application.ai_service import AIService
+from .application.integrations import IntegrationService
 from .application.auth import decode_token, has_permission
 from .application.services import WarehouseService
 from .config.settings import get_settings
@@ -46,6 +47,8 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     def _permission_for(path: str, method: str) -> str | None:
         if "/ai/" in path:
             return "ai.run" if method != "GET" and path.endswith(("/run", "/chat")) else "ai.read"
+        if "/integrations" in path:
+            return "administration.write" if method not in {"GET", "HEAD"} else "administration.read"
         if "/events" in path or "/alerts" in path:
             return "administration.write" if method in {"POST", "PATCH", "DELETE"} and "/alert-rules" in path else "audit.read"
         if "/alert-rules" in path:
@@ -82,8 +85,11 @@ def create_app() -> FastAPI:
     def ai_service_provider() -> AIService:
         return AIService(MySQLWarehouseRepository(settings), LocalDeterministicAIProvider())
 
+    def integration_service_provider() -> IntegrationService:
+        return IntegrationService(MySQLWarehouseRepository(settings))
+
     app.add_middleware(AuthorizationMiddleware, settings=settings, repository_provider=lambda: MySQLWarehouseRepository(settings))
-    app.include_router(build_router(service_provider, settings.environment, ai_service_provider, lambda: MySQLWarehouseRepository(settings), settings.auth_secret, settings.auth_token_ttl_seconds), prefix=settings.api_prefix)
+    app.include_router(build_router(service_provider, settings.environment, ai_service_provider, lambda: MySQLWarehouseRepository(settings), settings.auth_secret, settings.auth_token_ttl_seconds, integration_service_provider), prefix=settings.api_prefix)
     return app
 
 

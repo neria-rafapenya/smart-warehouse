@@ -80,6 +80,9 @@ export const warehouseRepository = {
   aiSuggestions: () => get('/ai/suggestions'),
   aiAnomalies: () => get('/ai/anomalies'),
   runAIAnomalies: () => send('/ai/anomalies/run', { method: 'POST' }),
+  integrations: () => get('/integrations'),
+  integrationHealth: () => get('/integrations/health'),
+  syncIntegration: (code, direction = 'outbound') => send(`/integrations/${encodeURIComponent(code)}/sync`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction }) }),
   createOrder: payload => send('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   previewOrderImport: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'false'); return send('/imports/orders', { method: 'POST', body: form }) },
   importOrders: file => { const form = new FormData(); form.append('file', file); form.append('confirm', 'true'); return send('/imports/orders', { method: 'POST', body: form }) },
@@ -101,8 +104,8 @@ export const warehouseRepository = {
   createReceipt: payload => send('/receipts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   createStockMovement: payload => send('/stock/movements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   async loadAll() {
-    const [dashboard, orders, stock, movements, suppliers, invoices, procedures, events, alerts, receipts, alertRules] = await Promise.all([
-      get('/dashboard'), get('/orders'), get('/stock'), get('/stock/movements?limit=100'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'),
+    const [dashboard, orders, stock, movements, suppliers, invoices, procedures, events, alerts, receipts, alertRules, integrations] = await Promise.all([
+      get('/dashboard'), get('/orders'), get('/stock'), get('/stock/movements?limit=100'), get('/suppliers'), get('/documents/invoices'), get('/documents/procedures'), get('/events?limit=100'), get('/alerts?limit=100'), get('/receipts'), get('/alert-rules'), get('/integrations/health'),
     ])
     const pending = Number(dashboard.orders_pending || 0)
     const lowStock = (stock || []).filter(item => item.status === 'replenish').length
@@ -113,7 +116,7 @@ export const warehouseRepository = {
         { label: 'Alertas activas', value: String(lowStock), change: 'stock bajo', tone: 'danger', icon: 'bi-bell' },
         { label: 'Referencias activas', value: String(dashboard.stock_items || 0), change: 'datos MySQL', tone: 'info', icon: 'bi-box-seam' },
       ],
-      orders: orders.map(mapOrder), stock: stock.map(mapStock), movements: movements.map(mapMovement), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), alertRules: alertRules.map(mapAlertRule), receipts: receipts.map(mapReceipt),
+      orders: orders.map(mapOrder), stock: stock.map(mapStock), movements: movements.map(mapMovement), suppliers: suppliers.map(mapSupplier), invoices: invoices.map(mapInvoice), procedures: procedures.map(mapProcedure), events: events.map(mapEvent), alerts: alerts.map(mapAlert), alertRules: alertRules.map(mapAlertRule), receipts: receipts.map(mapReceipt), integrations,
     }
   },
 }

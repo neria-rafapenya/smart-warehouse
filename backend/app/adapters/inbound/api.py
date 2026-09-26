@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from ...application.services import WarehouseService
 from ...application.ai_service import AIService
+from ...application.integrations import IntegrationService
 from ...application.auth import create_token, decode_token, verify_password
 from ...domain.errors import OrderNotFoundError
 
@@ -95,6 +96,10 @@ class AIChatRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=5, max_length=190)
     password: str = Field(min_length=4, max_length=128)
+
+
+class IntegrationSyncRequest(BaseModel):
+    direction: str = Field(default="outbound", pattern="^(inbound|outbound|bidirectional)$")
 
 
 def _amount(value: str) -> float | None:
@@ -293,7 +298,7 @@ def _extract_invoice(content: bytes) -> dict:
     return extracted
 
 
-def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None, auth_repository_provider: Callable[[], object] | None = None, auth_secret: str = "local-only-change-before-production", auth_token_ttl_seconds: int = 28800) -> APIRouter:
+def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None, auth_repository_provider: Callable[[], object] | None = None, auth_secret: str = "local-only-change-before-production", auth_token_ttl_seconds: int = 28800, integration_service_provider: Callable[[], IntegrationService] | None = None) -> APIRouter:
     router = APIRouter()
 
     def service() -> WarehouseService:
@@ -303,6 +308,11 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         if ai_service_provider is None:
             raise HTTPException(status_code=503, detail="Proveedor de IA no configurado")
         return ai_service_provider()
+
+    def integration_service() -> IntegrationService:
+        if integration_service_provider is None:
+            raise HTTPException(status_code=503, detail="Integraciones no configuradas")
+        return integration_service_provider()
 
     @router.post("/auth/login", tags=["auth"])
     def login(request: LoginRequest):
@@ -329,6 +339,21 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
             raise HTTPException(status_code=401, detail="Usuario no disponible")
         user.pop("password_hash", None)
         return user
+
+    @router.get("/integrations", tags=["integrations"])
+    def integrations(current: Annotated[IntegrationService, Depends(integration_service)]):
+        return current.list()
+
+    @router.get("/integrations/health", tags=["integrations"])
+    def integrations_health(current: Annotated[IntegrationService, Depends(integration_service)]):
+        return current.health()
+
+    @router.post("/integrations/{code}/sync", tags=["integrations"])
+    def integration_sync(code: str, request: IntegrationSyncRequest, current: Annotated[IntegrationService, Depends(integration_service)]):
+        try:
+            return current.sync(code, request.direction)
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
 
     @router.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:

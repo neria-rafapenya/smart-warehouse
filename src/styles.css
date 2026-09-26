@@ -7,3 +7,11 @@
 .auth-card h1 { font-size: 24px; color: #17233f; margin: 0; }
 .auth-card h1 span, .top-brand strong span { color: #2f6fed; }
 .auth-card p { color: #64748b; font-size: 14px; margin-bottom: 26px; }
+.integration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.integration-card { position: relative; min-height: 215px; }
+.integration-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #edf3ff; color: #2f6fed; font-size: 20px; margin-bottom: 14px; }
+.integration-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.integration-head h3 { margin: 0; font-size: 16px; }
+.integration-head p { margin: 5px 0 0; color: #7b879c; font-size: 12px; overflow-wrap: anywhere; }
+.integration-meta { display: flex; justify-content: space-between; gap: 12px; color: #7b879c; font-size: 12px; margin: 20px 0 16px; }
+@media (max-width: 760px) { .integration-grid { grid-template-columns: 1fr; } }
