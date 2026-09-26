@@ -1062,11 +1062,13 @@ class MySQLWarehouseRepository:
                    ON DUPLICATE KEY UPDATE supplier_sku = VALUES(supplier_sku), requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
                 (order["id"], product["id"], offer["supplier_sku"], quantity, unit_price, total),
             )
-            mandatory_procedures = {"PURCHASE_APPROVAL", "RECEIVING_CHECK", "INVOICE_MATCH"}
-            requested_procedures = list(dict.fromkeys([*mandatory_procedures, *(payload.get("required_procedures") or [])]))
-            placeholders = ",".join(["%s"] * len(requested_procedures))
-            cursor.execute(f"SELECT id, code FROM required_procedures WHERE active = TRUE AND code IN ({placeholders})", tuple(requested_procedures))
-            selected_procedures = cursor.fetchall()
+            requested_procedures = list(dict.fromkeys(payload.get("required_procedures") or []))
+            if not requested_procedures:
+                selected_procedures = []
+            else:
+                placeholders = ",".join(["%s"] * len(requested_procedures))
+                cursor.execute(f"SELECT id, code FROM required_procedures WHERE active = TRUE AND code IN ({placeholders})", tuple(requested_procedures))
+                selected_procedures = cursor.fetchall()
             selected_codes = {item["code"] for item in selected_procedures}
             if selected_codes != set(requested_procedures):
                 raise ValueError("Uno de los procedimientos seleccionados no existe o no está activo")
