@@ -1,0 +1,7 @@
+aws_region = "eu-south-2"
+environment = "staging"
+documents_bucket_name = "replace-with-unique-staging-bucket"
+api_container_image = "replace-with-ecr-image:staging"
+enable_rds = false
+enable_ecs_service = false
+ecs_desired_count = 0

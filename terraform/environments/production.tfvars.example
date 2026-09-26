@@ -1,0 +1,9 @@
+aws_region = "eu-south-2"
+environment = "production"
+documents_bucket_name = "replace-with-unique-production-bucket"
+api_container_image = "replace-with-ecr-image:production"
+enable_rds = true
+enable_ecs_service = true
+ecs_desired_count = 2
+rds_instance_class = "db.t4g.micro"
+# Inyectar rds_master_password desde CI/CD/Secrets Manager; nunca guardarlo aquí.

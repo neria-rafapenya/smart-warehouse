@@ -15,21 +15,22 @@ resource "aws_db_subnet_group" "this" {
   subnet_ids = var.subnet_ids
 }
 resource "aws_db_instance" "this" {
-  count                   = var.enabled ? 1 : 0
-  identifier              = "${var.name}-${var.environment}"
-  engine                  = "mysql"
-  engine_version          = "8.0"
-  instance_class          = var.instance_class
-  allocated_storage       = 20
-  storage_type            = "gp3"
-  db_name                 = "smart_warehouse"
-  username                = var.master_username
-  password                = var.master_password
-  db_subnet_group_name    = aws_db_subnet_group.this[0].name
-  skip_final_snapshot     = true
-  deletion_protection     = false
-  publicly_accessible     = false
-  backup_retention_period = 7
+  count                     = var.enabled ? 1 : 0
+  identifier                = "${var.name}-${var.environment}"
+  engine                    = "mysql"
+  engine_version            = "8.0"
+  instance_class            = var.instance_class
+  allocated_storage         = 20
+  storage_type              = "gp3"
+  db_name                   = "smart_warehouse"
+  username                  = var.master_username
+  password                  = var.master_password
+  db_subnet_group_name      = aws_db_subnet_group.this[0].name
+  skip_final_snapshot       = var.environment != "production"
+  final_snapshot_identifier = var.environment == "production" ? "${var.name}-${var.environment}-final" : null
+  deletion_protection       = var.environment == "production"
+  publicly_accessible       = false
+  backup_retention_period   = 7
 }
 output "endpoint" {
   value     = try(aws_db_instance.this[0].address, null)

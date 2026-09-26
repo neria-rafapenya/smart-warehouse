@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: mysql:8.0
+    profiles: ["docker"]
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: smart_warehouse
+    ports:
+      - "3307:3306"
+    volumes:
+      - smart-warehouse-mysql:/var/lib/mysql
+
+  api:
+    build:
+      context: ./backend
+    profiles: ["docker"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: smart_warehouse
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      AUTH_SECRET: change-this-local-secret
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+
+volumes:
+  smart-warehouse-mysql:

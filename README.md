@@ -59,3 +59,7 @@ La fuente de datos del frontend ya no está en mocks locales: consume FastAPI RE
 ## Estado de la demo
 
 Los datos son mock y el comportamiento es determinista. No se despliega AWS ni se generan costes en esta fase.
+
+## DevOps e infraestructura futura
+
+La API dispone de `backend/Dockerfile` y `docker-compose.yml` opcional para probar FastAPI con MySQL aislado. El workflow `.github/workflows/ci.yml` valida frontend, backend y Terraform en cada cambio. La configuración Terraform mantiene separados los perfiles de desarrollo, staging y producción; no ejecuta despliegues automáticos. Consulta [docs/devops.md](/Users/rafa_penya/Documents/GitHub/smart-warehouse/docs/devops.md) para logs, métricas, backups y recuperación.
