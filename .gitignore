@@ -7,6 +7,10 @@ __pycache__/
 .venv/
 *.pyc
 .DS_Store
+terraform/**/*.tfvars
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/.terraform/
 coverage/
 backend/storage/*
 !backend/storage/.gitkeep

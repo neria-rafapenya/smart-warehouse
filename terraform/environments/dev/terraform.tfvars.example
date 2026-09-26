@@ -1,0 +1,8 @@
+aws_region = "eu-south-2"
+environment = "dev"
+documents_bucket_name = "replace-with-globally-unique-name"
+api_container_image = "replace-with-account.dkr.ecr.eu-south-2.amazonaws.com/smart-warehouse-api:latest"
+enable_rds = false
+enable_ecs_service = false
+ecs_desired_count = 0
+# rds_master_password debe inyectarse desde CI/CD o Secrets Manager.
