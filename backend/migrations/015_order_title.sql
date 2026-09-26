@@ -1,0 +1,2 @@
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS title VARCHAR(180) NULL AFTER external_id;

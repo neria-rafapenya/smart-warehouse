@@ -103,7 +103,7 @@ class MySQLWarehouseRepository:
 
     def list_orders(self, status: str | None = None) -> Sequence[dict]:
         query = """
-            SELECT o.external_id, o.status, o.risk, o.currency, o.total,
+            SELECT o.external_id, o.title, o.status, o.risk, o.currency, o.total,
                    o.requested_at, u.full_name AS requester,
                    s.legal_name AS supplier, p.sku, p.description AS product,
                    ol.requested_quantity, ol.unit_price,
@@ -126,7 +126,7 @@ class MySQLWarehouseRepository:
     def get_order(self, external_id: str) -> dict | None:
         rows = self._fetch_all(
             """
-            SELECT o.external_id, o.status, o.risk, o.currency, o.total,
+            SELECT o.external_id, o.title, o.status, o.risk, o.currency, o.total,
                    o.requested_at, u.full_name AS requester,
                    s.legal_name AS supplier, p.sku, p.description AS product,
                    ol.requested_quantity, ol.unit_price,
@@ -1029,10 +1029,10 @@ class MySQLWarehouseRepository:
             unit_price = float(offer["unit_cost"])
             total = round(quantity * unit_price, 2)
             cursor.execute(
-                """INSERT INTO orders (external_id, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
-                   VALUES (%s, 'purchase_request', 'pending', 'yellow', %s, %s, %s, %s, %s, %s, NOW())
-                   ON DUPLICATE KEY UPDATE total = VALUES(total), updated_at = CURRENT_TIMESTAMP""",
-                (external_id, requester["id"], supplier["id"], warehouse["id"], round(total / 1.21, 2), round(total - total / 1.21, 2), total),
+                """INSERT INTO orders (external_id, title, order_type, status, risk, requester_id, supplier_id, warehouse_id, subtotal, tax_amount, total, requested_at)
+                   VALUES (%s, %s, 'purchase_request', 'pending', 'yellow', %s, %s, %s, %s, %s, %s, NOW())
+                   ON DUPLICATE KEY UPDATE title = VALUES(title), total = VALUES(total), updated_at = CURRENT_TIMESTAMP""",
+                (external_id, payload.get("title"), requester["id"], supplier["id"], warehouse["id"], round(total / 1.21, 2), round(total - total / 1.21, 2), total),
             )
             cursor.execute("SELECT id FROM orders WHERE external_id = %s", (external_id,))
             order = cursor.fetchone()

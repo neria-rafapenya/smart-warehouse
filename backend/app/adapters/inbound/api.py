@@ -35,6 +35,7 @@ class HealthResponse(BaseModel):
 
 class CreateOrderRequest(BaseModel):
     sku: str
+    title: str | None = Field(default=None, max_length=180)
     quantity: float = Field(gt=0)
     supplier_code: str
     unit_price: float | None = Field(default=None, gt=0)
