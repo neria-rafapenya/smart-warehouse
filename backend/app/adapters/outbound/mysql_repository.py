@@ -337,7 +337,8 @@ class MySQLWarehouseRepository:
             SELECT i.invoice_number, s.legal_name AS supplier, i.invoice_date,
                    i.total, i.currency, i.status, d.extraction_status, d.confidence,
                    ir.status AS reconciliation_status, ir.confidence AS reconciliation_confidence,
-                   ir.checks_json AS reconciliation_checks, ae.status AS accounting_status,
+                   ir.checks_json AS reconciliation_checks, o.external_id AS order_number,
+                   gr.receipt_number, ae.status AS accounting_status,
                    ae.exported_at, ae.target_system
             FROM invoices i
             LEFT JOIN suppliers s ON s.id = i.supplier_id
@@ -346,6 +347,8 @@ class MySQLWarehouseRepository:
                 SELECT latest.id FROM invoice_reconciliations latest
                 WHERE latest.invoice_id = i.id ORDER BY latest.created_at DESC LIMIT 1
             )
+            LEFT JOIN orders o ON o.id = ir.order_id
+            LEFT JOIN goods_receipts gr ON gr.id = ir.receipt_id
             LEFT JOIN invoice_accounting_exports ae ON ae.invoice_id = i.id
             ORDER BY i.created_at DESC
             """

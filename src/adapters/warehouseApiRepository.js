@@ -42,7 +42,7 @@ function mapSupplier(item) {
 function mapInvoice(item) {
   const reconciliationStatus = item.reconciliation_status === 'matched' ? 'Conciliada' : item.reconciliation_status ? 'Revisar conciliación' : 'Pendiente conciliar'
   const accountingStatus = item.accounting_status === 'exported' ? 'Exportado' : item.accounting_status === 'exportable' ? 'Exportable' : 'Pendiente'
-  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar', reconciliationStatus, reconciliationTone: item.reconciliation_status === 'matched' ? 'success' : 'warning', accountingStatus, accountingTone: item.accounting_status === 'exported' ? 'success' : item.accounting_status === 'exportable' ? 'info' : 'warning' }
+  return { ...item, id: item.invoice_number, date: item.invoice_date || '—', amount: euro(item.total), confidence: item.confidence ? `${(Number(item.confidence) * 100).toFixed(1).replace('.', ',')}%` : '—', type: 'PDF digital', orderNumber: item.order_number || '', receiptNumber: item.receipt_number || '', status: item.status === 'exportable' ? 'Exportable' : 'Pendiente revisar', reconciliationStatus, reconciliationTone: item.reconciliation_status === 'matched' ? 'success' : 'warning', accountingStatus, accountingTone: item.accounting_status === 'exported' ? 'success' : item.accounting_status === 'exportable' ? 'info' : 'warning' }
 }
 
 function mapProcedure(item) {
