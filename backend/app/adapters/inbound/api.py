@@ -38,6 +38,7 @@ class CreateOrderRequest(BaseModel):
     title: str | None = Field(default=None, max_length=180)
     quantity: float = Field(gt=0)
     supplier_code: str
+    required_procedures: list[str] = Field(default_factory=lambda: ["PURCHASE_APPROVAL", "RECEIVING_CHECK", "INVOICE_MATCH"])
     unit_price: float | None = Field(default=None, gt=0)
     supplier_sku: str | None = None
     warehouse_code: str = "MAD-01"

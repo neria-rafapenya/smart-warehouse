@@ -166,9 +166,9 @@ class MySQLWarehouseRepository:
                 cursor.execute(
                     """SELECT COUNT(*) AS total_required,
                               SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_required
-                       FROM required_procedures rp
-                       LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = %s
-                       WHERE rp.active = TRUE""",
+                       FROM order_procedures op
+                       JOIN required_procedures rp ON rp.id = op.procedure_id
+                       WHERE op.order_id = %s AND rp.active = TRUE""",
                     (order["id"],),
                 )
                 documents = cursor.fetchone() or {}
@@ -376,13 +376,13 @@ class MySQLWarehouseRepository:
             return self._fetch_all(
                 """
                 SELECT rp.code, rp.name, rp.description, rp.active,
-                       COALESCE(op.status, 'missing') AS status,
+                       op.status,
                        op.checked_at, d.original_filename
-                FROM required_procedures rp
-                JOIN orders o ON o.external_id = %s
-                LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = o.id
+                FROM orders o
+                JOIN order_procedures op ON op.order_id = o.id
+                JOIN required_procedures rp ON rp.id = op.procedure_id
                 LEFT JOIN documents d ON d.id = op.document_id
-                WHERE rp.active = TRUE
+                WHERE o.external_id = %s AND rp.active = TRUE
                 ORDER BY rp.code
                 """,
                 (external_id,),
@@ -392,7 +392,7 @@ class MySQLWarehouseRepository:
             SELECT rp.code, rp.name, rp.description, rp.active,
                    COUNT(DISTINCT op.order_id) AS linked_orders,
                    SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_orders,
-                   COUNT(DISTINCT o.id) - SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS missing_orders
+                   COUNT(DISTINCT op.order_id) - SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS missing_orders
             FROM required_procedures rp
             CROSS JOIN orders o
             LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = o.id
@@ -655,6 +655,9 @@ class MySQLWarehouseRepository:
                 raise ValueError("Pedido o procedimiento obligatorio no encontrado")
             if order.get("status") not in {"pending", "validated"}:
                 raise ValueError("La documentación obligatoria solo puede completarse antes de aprobar el pedido")
+            cursor.execute("SELECT 1 FROM order_procedures WHERE order_id = %s AND procedure_id = %s LIMIT 1", (order["id"], procedure["id"]))
+            if not cursor.fetchone():
+                raise ValueError("Este procedimiento no fue seleccionado como requisito del pedido")
             cursor.execute(
                 """INSERT INTO documents (document_type, original_filename, storage_key, mime_type, extraction_status, confidence, uploaded_by)
                    VALUES ('procedure', %s, %s, %s, 'not_applicable', 1.0000, (SELECT id FROM users WHERE email = 'laura.martin@smartwarehouse.local' LIMIT 1))""",
@@ -905,9 +908,9 @@ class MySQLWarehouseRepository:
             cursor.execute(
                 """SELECT COUNT(*) AS total_required,
                           SUM(CASE WHEN op.status = 'complete' THEN 1 ELSE 0 END) AS completed_required
-                   FROM required_procedures rp
-                   LEFT JOIN order_procedures op ON op.procedure_id = rp.id AND op.order_id = %s
-                   WHERE rp.active = TRUE""",
+                   FROM order_procedures op
+                   JOIN required_procedures rp ON rp.id = op.procedure_id
+                   WHERE op.order_id = %s AND rp.active = TRUE""",
                 (order["id"],),
             )
             documents = cursor.fetchone() or {}
@@ -1058,6 +1061,18 @@ class MySQLWarehouseRepository:
                    VALUES (%s, %s, %s, %s, %s, %s)
                    ON DUPLICATE KEY UPDATE supplier_sku = VALUES(supplier_sku), requested_quantity = VALUES(requested_quantity), unit_price = VALUES(unit_price), line_total = VALUES(line_total)""",
                 (order["id"], product["id"], offer["supplier_sku"], quantity, unit_price, total),
+            )
+            mandatory_procedures = {"PURCHASE_APPROVAL", "RECEIVING_CHECK", "INVOICE_MATCH"}
+            requested_procedures = list(dict.fromkeys([*mandatory_procedures, *(payload.get("required_procedures") or [])]))
+            placeholders = ",".join(["%s"] * len(requested_procedures))
+            cursor.execute(f"SELECT id, code FROM required_procedures WHERE active = TRUE AND code IN ({placeholders})", tuple(requested_procedures))
+            selected_procedures = cursor.fetchall()
+            selected_codes = {item["code"] for item in selected_procedures}
+            if selected_codes != set(requested_procedures):
+                raise ValueError("Uno de los procedimientos seleccionados no existe o no está activo")
+            cursor.executemany(
+                "INSERT IGNORE INTO order_procedures (order_id, procedure_id, status) VALUES (%s, %s, 'missing')",
+                [(order["id"], item["id"]) for item in selected_procedures],
             )
             cursor.execute(
                 """INSERT INTO order_status_history (order_id, from_status, to_status, reason)

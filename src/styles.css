@@ -29,3 +29,10 @@
 .workflow-document-bar > div { height: 100%; min-width: 0; border-radius: inherit; background: #20ae75; transition: width .2s ease; }
 .validation-row .validation-icon.success { color: #168a5a; background: #e7f8ef; }
 .validation-row .validation-icon.warning { color: #b8790a; background: #fff5df; }
+.required-procedure-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.required-procedure-option { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid #e5eaf2; border-radius: 7px; background: #fbfcff; cursor: pointer; }
+.required-procedure-option input { margin-top: 3px; accent-color: var(--blue); }
+.required-procedure-option strong, .required-procedure-option small { display: block; }
+.required-procedure-option strong { font-size: 10px; }
+.required-procedure-option small { margin-top: 3px; color: #8793a5; font-size: 9px; line-height: 1.3; }
+@media (max-width: 760px) { .required-procedure-grid { grid-template-columns: 1fr; } }
