@@ -4,6 +4,22 @@ Base de Fase 2 preparada con arquitectura hexagonal. La demo React consume esta 
 
 La integración prevista es **React → FastAPI REST → casos de uso → repositorios MySQL**. Ningún código del frontend tendrá credenciales ni conexión directa a MySQL. En AWS, FastAPI será desplegado detrás de un balanceador/API Gateway y MySQL permanecerá en una red privada.
 
+## Capa de inteligencia artificial desacoplada
+
+La IA se ejecuta inicialmente con `LocalDeterministicAIProvider`: reglas explicables y estadística descriptiva sobre los datos de MySQL local. No realiza llamadas a AWS ni consume modelos externos. El proveedor está detrás del puerto `AIProvider`, por lo que posteriormente se podrá añadir Bedrock u otro proveedor sin cambiar los casos de uso ni la API.
+
+Casos disponibles en local:
+
+- `GET /api/v1/ai/anomalies` — anomalías de volumen y precio.
+- `POST /api/v1/ai/anomalies/run` — ejecuta y persiste eventos/avisos de anomalías.
+- `GET /api/v1/ai/demand?sku=...` — previsión determinista a 30 días.
+- `GET /api/v1/ai/suppliers/compare` — ranking explicable por valoración y plazo.
+- `GET /api/v1/ai/suggestions` — sugerencias de reposición y revisión de pedidos.
+- `POST /api/v1/ai/suggestions/run` — persiste las sugerencias como eventos.
+- `POST /api/v1/ai/chat` — chatbot local conectado a pedidos, stock, proveedores y eventos.
+
+Las operaciones `run` escriben en `audit_events` y generan notificaciones cuando procede. El chatbot registra cada consulta como `ai.chat_query`, dejando trazabilidad de las fuentes utilizadas. Las respuestas incluyen `engine: local_deterministic_v1` para hacer visible que todavía no se ha usado un modelo generativo.
+
 En macOS, el repositorio usa `MYSQL_USE_PURE=true` por defecto. Esto evita la extensión nativa C de `mysql-connector-python`, que puede producir `EXC_BAD_ACCESS` al abrir varias conexiones concurrentes con Python 3.13.
 
 ```text

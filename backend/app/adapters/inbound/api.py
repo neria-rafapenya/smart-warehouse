@@ -15,6 +15,7 @@ from pypdf import PdfReader
 from pydantic import BaseModel, Field
 
 from ...application.services import WarehouseService
+from ...application.ai_service import AIService
 from ...domain.errors import OrderNotFoundError
 
 
@@ -84,6 +85,10 @@ class AlertRuleRequest(BaseModel):
     enabled: bool = True
     recipients: list[str] = Field(default_factory=list)
     channels: list[str] = Field(default_factory=lambda: ["in_app"])
+
+
+class AIChatRequest(BaseModel):
+    message: str = Field(min_length=2, max_length=2000)
 
 
 def _amount(value: str) -> float | None:
@@ -282,11 +287,16 @@ def _extract_invoice(content: bytes) -> dict:
     return extracted
 
 
-def build_router(service_provider: Callable[[], WarehouseService], environment: str) -> APIRouter:
+def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None) -> APIRouter:
     router = APIRouter()
 
     def service() -> WarehouseService:
         return service_provider()
+
+    def ai_service() -> AIService:
+        if ai_service_provider is None:
+            raise HTTPException(status_code=503, detail="Proveedor de IA no configurado")
+        return ai_service_provider()
 
     @router.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
@@ -321,6 +331,34 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/orders/{external_id}/decisions", tags=["orders"])
     def decisions(external_id: str, current: Annotated[WarehouseService, Depends(service)]):
         return current.decisions(external_id)
+
+    @router.get("/ai/anomalies", tags=["ai"])
+    def ai_anomalies(current: Annotated[AIService, Depends(ai_service)]):
+        return current.anomalies(persist=False)
+
+    @router.post("/ai/anomalies/run", tags=["ai"])
+    def run_ai_anomalies(current: Annotated[AIService, Depends(ai_service)]):
+        return current.anomalies(persist=True)
+
+    @router.get("/ai/demand", tags=["ai"])
+    def ai_demand(current: Annotated[AIService, Depends(ai_service)], sku: str | None = None):
+        return current.demand(sku=sku)
+
+    @router.get("/ai/suppliers/compare", tags=["ai"])
+    def ai_supplier_comparison(current: Annotated[AIService, Depends(ai_service)]):
+        return current.suppliers()
+
+    @router.get("/ai/suggestions", tags=["ai"])
+    def ai_suggestions(current: Annotated[AIService, Depends(ai_service)]):
+        return current.suggestions(persist=False)
+
+    @router.post("/ai/suggestions/run", tags=["ai"])
+    def run_ai_suggestions(current: Annotated[AIService, Depends(ai_service)]):
+        return current.suggestions(persist=True)
+
+    @router.post("/ai/chat", tags=["ai"])
+    def ai_chat(request: AIChatRequest, current: Annotated[AIService, Depends(ai_service)]):
+        return current.chat(request.message)
 
     @router.post("/orders/{external_id}/validate", response_model=ValidationResponse, tags=["orders"])
     def validate_order(external_id: str, current: Annotated[WarehouseService, Depends(service)]):

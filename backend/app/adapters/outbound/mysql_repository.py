@@ -819,6 +819,31 @@ class MySQLWarehouseRepository:
             cursor.close()
             connection.close()
 
+    def record_ai_event(self, event_type: str, severity: str, aggregate_type: str, aggregate_id: str, payload: dict, notify: bool = False, title: str | None = None, body: str | None = None) -> int:
+        connection = self._connect()
+        cursor = connection.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                """INSERT INTO audit_events (event_type, severity, aggregate_type, aggregate_id, actor_type, payload)
+                   VALUES (%s, %s, %s, %s, 'ai', %s)""",
+                (event_type, severity, aggregate_type, aggregate_id, json.dumps(payload, ensure_ascii=False, default=str)),
+            )
+            event_id = cursor.lastrowid
+            if notify:
+                cursor.execute(
+                    """INSERT INTO notifications (event_id, channel, status, title, body)
+                       VALUES (%s, 'in_app', 'pending', %s, %s)""",
+                    (event_id, title or "Aviso de inteligencia artificial", body or "Se ha generado una alerta de IA."),
+                )
+            connection.commit()
+            return int(event_id)
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
     def create_order(self, payload: dict) -> dict:
         connection = self._connect()
         cursor = connection.cursor(dictionary=True)
