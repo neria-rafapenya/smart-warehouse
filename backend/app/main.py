@@ -24,7 +24,9 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         public = (path.endswith("/health") or path.endswith("/auth/login") or path.endswith("/openapi.json") or path.startswith("/docs") or path.startswith("/redoc"))
-        if public:
+        # El navegador necesita completar el preflight CORS antes de enviar
+        # Authorization; nunca debe requerir token ni permisos.
+        if request.method == "OPTIONS" or public:
             return await call_next(request)
         authorization = request.headers.get("Authorization", "")
         token = authorization[7:] if authorization.lower().startswith("bearer ") else ""
