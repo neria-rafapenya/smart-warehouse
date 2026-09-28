@@ -186,6 +186,7 @@
 .global-guide-column .demo-sidebar-head strong::after,
 .global-guide-column .demo-sitemap > strong::after,
 .global-guide-column .demo-faqs-heading strong::after { content: ""; flex: 1; height: 1px; background: #d7dbe1; }
+.global-guide-column .demo-sitemap > strong::after { display: none; }
 .app-content-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 0; margin: -28px -34px -50px; min-height: calc(100vh - 136px); }
 .global-guide-column { min-width: 0; background: #f1f3f6; }
 .global-guide-column, .global-guide-column button, .global-guide-column a { font-family: 'Barlow Condensed', sans-serif; }
