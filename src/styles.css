@@ -387,3 +387,5 @@ th { font-size: 13px; }
 html { scrollbar-gutter: stable; }
 .topbar .top-menu { gap: 8px; }
 .topbar .top-menu .nav-link { font-size: 19px !important; }
+.global-status-bar span,
+.global-status-bar strong { font-family: 'Barlow Condensed', sans-serif; }
