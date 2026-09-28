@@ -334,3 +334,7 @@ th { font-size: 13px; }
 .global-guide-column .demo-faqs { margin-top: 10px; padding-top: 10px; }
 .global-guide-column .demo-sidebar-foot { margin-top: 10px; padding-top: 8px; }
 .global-guide-column .demo-faq-link { justify-content: flex-end; text-decoration: underline; }
+.global-guide-column .demo-sidebar-foot { margin-top: 24px; color: #e33427 !important; }
+.global-guide-column .demo-sidebar-foot span,
+.global-guide-column .demo-faq-link,
+.global-guide-column .demo-faq-link:hover { color: #e33427 !important; }
