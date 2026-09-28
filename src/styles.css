@@ -346,3 +346,12 @@ th { font-size: 13px; }
 .global-guide-column .demo-sitemap > div strong,
 .global-guide-column .demo-sitemap > div small,
 .global-guide-column .demo-faqs p { color: #888888 !important; }
+.global-guide-column .demo-sidebar-head strong,
+.global-guide-column .demo-sitemap > strong,
+.global-guide-column .demo-faqs-heading strong,
+.global-guide-column .demo-action-button strong,
+.global-guide-column .demo-sitemap > div strong { color: #333333 !important; }
+.global-guide-column .demo-action-button small,
+.global-guide-column .demo-sitemap > div small,
+.global-guide-column .demo-faqs p,
+.global-guide-column .demo-faq-link { color: #888888 !important; }
