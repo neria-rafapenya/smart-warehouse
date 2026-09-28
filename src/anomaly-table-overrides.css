@@ -2,3 +2,13 @@
 .anomaly-table-panel td:nth-child(6) {
   min-width: 100px;
 }
+
+.anomaly-table-panel th:nth-child(2),
+.anomaly-table-panel td:nth-child(2) {
+  width: 23%;
+}
+
+.anomaly-table-panel th:nth-child(5),
+.anomaly-table-panel td:nth-child(5) {
+  width: 25%;
+}
