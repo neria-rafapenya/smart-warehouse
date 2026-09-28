@@ -389,6 +389,7 @@ function IntelligenceDashboard({ onCopilot }) {
         })),
       }));
       setMessage("Análisis ejecutado y registrado en auditoría.");
+      window.setTimeout(() => setMessage(""), 4000);
     } catch (error) {
       setMessage(error.message || "No se pudo ejecutar el análisis");
     } finally {
@@ -505,7 +506,10 @@ function AnomaliesPage() {
         ? await warehouseService.runAIAnomalies()
         : await warehouseService.aiAnomalies();
       setItems(recordAnomalyAnalysis(result.findings || [], run));
-      if (run) setMessage("Análisis ejecutado y guardado en auditoría.");
+      if (run) {
+        setMessage("Análisis ejecutado y guardado en auditoría.");
+        window.setTimeout(() => setMessage(""), 4000);
+      }
     } catch (error) {
       setMessage(error.message || "No se pudieron cargar las anomalías");
     } finally {
