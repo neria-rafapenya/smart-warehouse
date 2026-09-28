@@ -112,6 +112,11 @@
 /* Full-width application shell and compact reference-style header. */
 .main-area { margin-left: 0; width: 100%; }
 .topbar { height: 72px; padding: 0 28px; }
+.global-status-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; min-height: 64px; padding: 11px 34px; background: #e33427; color: #fff; }
+.global-status-bar > div { display: grid; grid-template-columns: 1fr auto; column-gap: 14px; align-items: center; min-width: 0; }
+.global-status-bar span { grid-column: 1; color: rgba(255, 255, 255, .86); font-size: 13px; line-height: 1.2; }
+.global-status-bar strong { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: #fff; font: 600 20px 'Space Grotesk'; }
+.global-status-bar small { grid-column: 1; color: rgba(255, 255, 255, .7); font-size: 12px; line-height: 1.2; }
 .topbar-inner { display: flex; align-items: center; gap: 28px; min-width: 0; }
 .top-brand { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; color: var(--ink); text-decoration: none; }
 .top-brand .brand-mark { width: 34px; height: 34px; border-radius: 9px; background: #2f6fed; color: #fff; display: grid; place-items: center; font-size: 17px; }
@@ -136,6 +141,7 @@
   .topbar-inner { gap: 16px; }
   .top-context { display: none; }
   .top-menu { margin-left: auto; }
+  .global-status-bar { gap: 18px; padding-left: 20px; padding-right: 20px; }
 }
 @media (max-width: 860px) {
   .topbar { height: auto; min-height: 72px; padding: 12px 18px; }
@@ -143,12 +149,17 @@
   .top-menu { order: 3; width: 100%; overflow-x: auto; margin-left: 0; }
   .top-actions { margin-left: auto; }
   .page-content.container-fluid { padding: 24px 20px 42px; }
+  .global-status-bar { grid-template-columns: repeat(2, 1fr); gap: 12px 24px; }
 }
 @media (max-width: 560px) {
   .top-menu .nav-link span { display: none; }
   .top-menu .nav-link { justify-content: center; min-width: 34px; }
   .top-actions .icon-btn { display: none; }
   .top-actions .copilot-btn { font-size: 11px; }
+  .global-status-bar { grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 16px; }
+  .global-status-bar > div { column-gap: 8px; }
+  .global-status-bar span, .global-status-bar small { font-size: 11px; }
+  .global-status-bar strong { font-size: 17px; }
 }
 
 /* Readable interface scale: keep headings and metric values unchanged. */

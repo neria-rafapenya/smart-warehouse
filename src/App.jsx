@@ -156,6 +156,7 @@ function App() {
             onGuide={() => setGuideOpen(true)}
             session={session}
           />
+          <GlobalStatusBar />
           <div className="page-content container-fluid">
             <Routes>
               <Route
@@ -296,6 +297,44 @@ function Header({ onCopilot, onGuide, session }) {
   );
 }
 
+function GlobalStatusBar() {
+  const { integrations } = useWarehouseData();
+  const [metrics, setMetrics] = useState({
+    anomalies: 0,
+    suggestions: 0,
+    demand: 0,
+    sandbox: false,
+  });
+  useEffect(() => {
+    Promise.allSettled([
+      warehouseService.aiAnomalies(),
+      warehouseService.aiSuggestions(),
+      warehouseService.aiDemand(),
+      warehouseService.sandboxSnapshot(),
+    ]).then((results) => {
+      const value = (index) =>
+        results[index].status === "fulfilled" ? results[index].value : null;
+      setMetrics({
+        anomalies: value(0)?.findings?.length || 0,
+        suggestions: value(1)?.suggestions?.length || 0,
+        demand: value(2)?.forecast_quantity || 0,
+        sandbox: Boolean(value(3)),
+      });
+    });
+  }, []);
+  const connected = integrations.filter(
+    (item) => item.health?.status === "available",
+  ).length;
+  return (
+    <div className="global-status-bar" role="status" aria-label="Resumen operativo">
+      <div><span>Anomalías detectadas</span><strong>{metrics.anomalies}</strong><small>explicables y auditadas</small></div>
+      <div><span>Recomendaciones</span><strong>{metrics.suggestions}</strong><small>pendientes de revisión</small></div>
+      <div><span>Previsión próxima</span><strong>{metrics.demand}</strong><small>unidades · próximos 30 días</small></div>
+      <div><span>Conectores activos</span><strong>{connected}</strong><small>{metrics.sandbox ? "sandbox local disponible" : "comprobando conexión"}</small></div>
+    </div>
+  );
+}
+
 const PageTitle = ({ eyebrow, title, children }) => (
   <div className="page-title">
     <div>
@@ -320,7 +359,7 @@ const Status = ({ children, tone = "neutral" }) => (
 );
 
 function IntelligenceDashboard({ onCopilot }) {
-  const { orders, stock, integrations } = useWarehouseData();
+  const { orders, stock } = useWarehouseData();
   const [ai, setAi] = useState({
     anomalies: [],
     suggestions: [],
@@ -376,9 +415,6 @@ function IntelligenceDashboard({ onCopilot }) {
       setLoading(false);
     }
   };
-  const connected = integrations.filter(
-    (item) => item.health?.status === "available",
-  ).length;
   return (
     <div className="intelligence-shell">
       <main className="intelligence-main">
@@ -412,52 +448,6 @@ function IntelligenceDashboard({ onCopilot }) {
           </div>
         </section>
         {message && <div className="alert alert-info">{message}</div>}
-        <section className="kpi-grid">
-          <div className="kpi-card">
-            <div className="kpi-icon danger">
-              <i className="bi bi-exclamation-triangle" />
-            </div>
-            <div>
-              <span>Anomalías detectadas</span>
-              <strong>{ai.anomalies.length}</strong>
-              <small>explicables y auditadas</small>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon warning">
-              <i className="bi bi-lightbulb" />
-            </div>
-            <div>
-              <span>Recomendaciones</span>
-              <strong>{ai.suggestions.length}</strong>
-              <small>pendientes de revisión</small>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon info">
-              <i className="bi bi-graph-up-arrow" />
-            </div>
-            <div>
-              <span>Previsión próxima</span>
-              <strong>{ai.demand?.forecast_quantity || 0}</strong>
-              <small>unidades · próximos 30 días</small>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon success">
-              <i className="bi bi-plug" />
-            </div>
-            <div>
-              <span>Conectores activos</span>
-              <strong>{connected}</strong>
-              <small>
-                {ai.sandbox
-                  ? "sandbox local disponible"
-                  : "comprobando conexión"}
-              </small>
-            </div>
-          </div>
-        </section>
         <section className="panel intelligence-anomalies-panel">
             <PanelHead
               title="Anomalías prioritarias"
