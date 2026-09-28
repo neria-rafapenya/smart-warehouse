@@ -183,6 +183,9 @@
 .global-guide-column .demo-sidebar-head strong,
 .global-guide-column .demo-sitemap > strong,
 .global-guide-column .demo-faqs-heading strong { text-transform: uppercase; }
+.global-guide-column .demo-sidebar-head strong,
+.global-guide-column .demo-sitemap > strong,
+.global-guide-column .demo-faqs-heading strong { font-weight: 400; }
 .global-guide-column .demo-sidebar-head strong::after,
 .global-guide-column .demo-sitemap > strong::after,
 .global-guide-column .demo-faqs-heading strong::after { content: ""; flex: 1; height: 1px; background: #d7dbe1; }
