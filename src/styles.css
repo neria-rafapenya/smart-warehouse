@@ -408,5 +408,6 @@ html { scrollbar-gutter: stable; }
 .intelligence-anomalies-panel > .panel-head > div > p { font-size: 15px !important; }
 .intelligence-anomalies-panel .anomaly-summary strong { font-size: 16px; }
 .intelligence-anomalies-panel .anomaly-recommendation small { color: #e33427 !important; }
+.intelligence-anomalies-panel .anomaly-summary { align-items: flex-start; }
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
