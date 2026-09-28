@@ -176,6 +176,8 @@
 .global-guide-column .demo-sitemap > div { grid-template-columns: 1fr; }
 .global-guide-column .demo-faq-link:hover { color: #666666; }
 .global-guide-column .demo-faqs { margin-top: 15px; padding: 15px 0 0; border: 0; border-top: 1px solid #d7dbe1; border-radius: 0; background: transparent; }
+.global-guide-column .demo-sitemap > strong::after { display: block; }
+.global-guide-column .demo-faqs { border-top: 0; }
 .global-guide-column .demo-sidebar-head > div { flex: 1; }
 .global-guide-column .demo-sidebar-head strong,
 .global-guide-column .demo-sitemap > strong,
