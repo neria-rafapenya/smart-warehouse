@@ -166,6 +166,7 @@
 .global-guide-column .demo-sidebar-head strong { font-size: 15px; }
 .global-guide-column,
 .global-guide-column * { color: #666666; }
+.global-guide-column * { color: #666666 !important; }
 .global-guide-column i,
 .global-guide-column .ai-spark { display: none; }
 .global-guide-column .demo-sidebar-head,
