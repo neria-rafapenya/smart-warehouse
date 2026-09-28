@@ -64,16 +64,16 @@
 .demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
 .demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
 .intelligence-anomalies-panel { width: 100%; }
-.anomaly-row { display: grid; grid-template-columns: minmax(210px, .85fr) minmax(260px, 1.5fr) auto; gap: 18px; align-items: center; padding: 14px 0; border-bottom: 1px solid #eef2f6; }
+.anomaly-row { display: grid; grid-template-columns: minmax(210px, .85fr) minmax(260px, 1.5fr) auto; gap: 18px; align-items: start; padding: 14px 0; border-bottom: 1px solid #eef2f6; }
 .anomaly-row:last-child { border-bottom: 0; }
 .anomaly-summary { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .anomaly-summary strong, .anomaly-summary span { display: block; }
 .anomaly-summary strong { color: #344054; }
-.anomaly-summary span { margin-top: 3px; color: #7b879c; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anomaly-summary span { margin-top: 3px; color: #7b879c; font-size: 11px; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
 .anomaly-recommendation { padding-left: 14px; border-left: 2px solid #e6edf9; }
 .anomaly-recommendation small, .anomaly-recommendation span { display: block; }
 .anomaly-recommendation small { color: #2563eb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
-.anomaly-recommendation span { margin-top: 3px; color: #667085; font-size: 12px; line-height: 1.4; }
+.anomaly-recommendation span { margin-top: 3px; color: #667085; font-size: 12px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .anomaly-row { grid-template-columns: 1fr; gap: 9px; } .anomaly-recommendation { padding-left: 0; border-left: 0; } }
 .demo-summary-intro { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #dbe7fb; border-radius: 10px; background: linear-gradient(135deg, #f7faff, #ffffff); }
 .demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 9px; background: #e7efff; color: #2563eb; }
