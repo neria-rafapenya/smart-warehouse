@@ -422,25 +422,28 @@ function IntelligenceDashboard({ onCopilot }) {
             </div>
           </div>
         </section>
-        <div className="detail-grid">
-          <section className="panel">
+        <section className="panel intelligence-anomalies-panel">
             <PanelHead
               title="Anomalías prioritarias"
-              subtitle="Volumen, precio y comportamiento fuera de patrón"
+              subtitle="Qué se desvía, por qué ocurre y qué conviene revisar"
             />
             {ai.anomalies.slice(0, 5).map((item) => (
-              <div className="receiving-row" key={item.order_id}>
-                <Risk risk={item.risk} />
-                <div>
+              <div className="anomaly-row" key={item.order_id}>
+                <div className="anomaly-summary">
+                  <Risk risk={item.risk} />
+                  <div>
                   <strong>{item.product || item.sku}</strong>
                   <span>
                     {item.order_id} · {item.reasons?.[0]}
                   </span>
+                  </div>
                 </div>
-                <Status
-                  tone={item.severity === "critical" ? "danger" : "warning"}
-                >
-                  {item.severity === "critical" ? "Crítica" : "Revisar"}
+                <div className="anomaly-recommendation">
+                  <small>Sugerencia de IA</small>
+                  <span>{item.suggestion || "Revisar antes de aprobar."}</span>
+                </div>
+                <Status tone={item.severity === "critical" ? "danger" : "warning"}>
+                    {item.severity === "critical" ? "Crítica" : "Revisar"}
                 </Status>
               </div>
             ))}
@@ -449,31 +452,7 @@ function IntelligenceDashboard({ onCopilot }) {
                 No se han detectado anomalías con los datos actuales.
               </p>
             )}
-          </section>
-          <section className="panel">
-            <PanelHead
-              title="Sugerencias explicables"
-              subtitle="La IA propone; el usuario decide"
-            />
-            {ai.suggestions.slice(0, 5).map((item, index) => (
-              <div className="receiving-row" key={`${item.sku}-${index}`}>
-                <div className="validation-icon warning">
-                  <i className="bi bi-lightbulb" />
-                </div>
-                <div>
-                  <strong>{item.sku || "Almacén"}</strong>
-                  <span>{item.message}</span>
-                </div>
-                <Status tone="warning">Pendiente</Status>
-              </div>
-            ))}
-            {!loading && !ai.suggestions.length && (
-              <p className="text-muted mb-0">
-                No hay recomendaciones pendientes.
-              </p>
-            )}
-          </section>
-        </div>
+        </section>
         <section className="panel">
           <PanelHead
             title="Capa de integración"
