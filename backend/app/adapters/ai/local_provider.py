@@ -17,6 +17,40 @@ def _round(value: float) -> float:
     return round(value, 2)
 
 
+def _suggestion_for_finding(
+    *,
+    price_anomaly: bool,
+    volume_anomaly: bool,
+    demand_anomaly: bool,
+    severity: str,
+    quantity: float,
+    demand: float,
+    price: float,
+    reference_price: float,
+) -> str:
+    """Genera una recomendación explicable a partir de señales deterministas."""
+    if price_anomaly and volume_anomaly:
+        return (
+            f"No aprobar todavía: validar las {quantity:g} uds. y negociar el precio "
+            f"({price:.2f} EUR frente a {reference_price:.2f} EUR de referencia)."
+        )
+    if price_anomaly:
+        return (
+            f"Solicitar confirmación del proveedor antes de aprobar: el precio "
+            f"({price:.2f} EUR) supera la referencia ({reference_price:.2f} EUR)."
+        )
+    if demand_anomaly:
+        return (
+            f"Revisar la previsión antes de comprar: {quantity:g} uds. superan "
+            f"la demanda prevista de {demand:g} uds."
+        )
+    if volume_anomaly:
+        return "Validar la necesidad del volumen solicitado y confirmar que no duplica una compra existente."
+    if severity == "critical":
+        return "Escalar la anomalía para revisión humana antes de aprobar el pedido."
+    return "Revisar el pedido y confirmar la causa de la desviación antes de aprobarlo."
+
+
 class LocalDeterministicAIProvider:
     """Motor reproducible basado en reglas y estadística descriptiva local."""
 
@@ -40,11 +74,14 @@ class LocalDeterministicAIProvider:
             reference_price = median(prices) if prices else price
             demand = _number(order.get("demand_quantity"))
             reasons = []
-            if reference_quantity and quantity > reference_quantity * 5:
+            volume_anomaly = bool(reference_quantity and quantity > reference_quantity * 5)
+            demand_anomaly = bool(demand and quantity > demand * 2)
+            price_anomaly = bool(reference_price and price > reference_price * 1.25)
+            if volume_anomaly:
                 reasons.append(f"Volumen {quantity:g} uds. frente a una mediana de {reference_quantity:g}")
-            if demand and quantity > demand * 2:
+            if demand_anomaly:
                 reasons.append(f"La demanda prevista ({demand:g}) no justifica {quantity:g} uds.")
-            if reference_price and price > reference_price * 1.25:
+            if price_anomaly:
                 reasons.append(f"Precio unitario {price:.2f} EUR, un {((price / reference_price) - 1) * 100:.1f}% sobre la referencia")
             if not reasons:
                 continue
@@ -60,7 +97,16 @@ class LocalDeterministicAIProvider:
                 "unit_price": _round(price),
                 "reference_unit_price": _round(reference_price),
                 "reasons": reasons,
-                "suggestion": "Revisión humana antes de aprobar el pedido y confirmar el precio con el proveedor.",
+                "suggestion": _suggestion_for_finding(
+                    price_anomaly=price_anomaly,
+                    volume_anomaly=volume_anomaly,
+                    demand_anomaly=demand_anomaly,
+                    severity=severity,
+                    quantity=quantity,
+                    demand=demand,
+                    price=price,
+                    reference_price=reference_price,
+                ),
             })
         return {"engine": self.name, "count": len(findings), "findings": findings}
 
