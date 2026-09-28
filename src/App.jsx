@@ -318,12 +318,9 @@ function GlobalStatusBar() {
   );
 }
 
-const PageTitle = ({ eyebrow, title, children }) => (
+const PageTitle = ({ title, children }) => (
   <div className="page-title">
-    <div>
-      <div className="eyebrow">{eyebrow}</div>
-      <h2>{title}</h2>
-    </div>
+    <div><h2>{title}</h2></div>
     <div className="page-actions">{children}</div>
   </div>
 );
