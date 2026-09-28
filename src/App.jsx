@@ -249,9 +249,6 @@ function Header({ onCopilot }) {
   const title =
     nav.find((x) => x.to === location.pathname)?.label ||
     "Detalle de operación";
-  const moreActive = nav
-    .slice(4)
-    .some((item) => location.pathname.startsWith(item.to));
   return (
     <header className={`topbar ${location.pathname === "/" ? "dashboard-topbar" : ""}`}>
       <div className="container-fluid topbar-inner">
@@ -274,16 +271,6 @@ function Header({ onCopilot }) {
               {item.count && <em>{item.count}</em>}
             </NavLink>
           ))}
-          <details className={`top-dropdown ${moreActive ? "active" : ""}`}>
-            <summary className="nav-link"><i className="bi bi-three-dots" /><span>Más</span><i className="bi bi-chevron-down dropdown-chevron" /></summary>
-            <div className="dropdown-menu show">
-              {nav.slice(4).map((item) => (
-                <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"}>
-                  <i className={`bi ${item.icon}`} /><span>{item.label}</span>{item.count && <em>{item.count}</em>}
-                </NavLink>
-              ))}
-            </div>
-          </details>
         </nav>
         <div className="top-actions">
           <button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button>
