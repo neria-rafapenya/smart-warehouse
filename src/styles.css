@@ -405,3 +405,4 @@ html { scrollbar-gutter: stable; }
 .page-content .insight-panel h3 { font-size: 19px; }
 .page-content .procedure-panel h3 { font-size: 17px; }
 .page-content .anomaly-recommendation small { font-size: 14px; }
+.copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }

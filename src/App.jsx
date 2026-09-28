@@ -402,7 +402,7 @@ function IntelligenceDashboard({ onCopilot }) {
             <i className="bi bi-stars" />{" "}
               {loading ? "Analizando…" : "Analizar ahora"}
           </Button>
-          <Button primary onClick={onCopilot}>
+          <Button primary className="copilot-open-btn" onClick={onCopilot}>
             <i className="bi bi-chat-dots" /> Abrir Copilot
           </Button>
         </PageTitle>
