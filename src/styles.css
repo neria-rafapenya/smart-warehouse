@@ -123,6 +123,10 @@
 .global-status-bar span { display: inline; }
 .global-status-bar strong { display: inline; margin-left: 14px; vertical-align: baseline; }
 .global-status-bar small { display: block; margin-top: 3px; }
+.global-status-bar > div { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "value label" "value detail"; column-gap: 14px; align-items: center; }
+.global-status-bar span { grid-area: label; }
+.global-status-bar strong { grid-area: value; margin-left: 0; }
+.global-status-bar small { grid-area: detail; margin-top: 3px; }
 .demo-action-button small,
 .demo-sitemap > div small,
 .demo-faqs p,
