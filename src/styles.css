@@ -44,3 +44,23 @@
 .demo-guide-note { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding: 12px; border-radius: 8px; background: #f8fafc; }
 .demo-guide-note i { color: #2563eb; font-size: 1.1rem; }
 .demo-guide-note span { display: block; color: #667085; font-size: .9rem; margin-top: 3px; }
+.intelligence-shell { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 22px; align-items: start; }
+.intelligence-main { min-width: 0; }
+.demo-sidebar { position: sticky; top: 18px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(31, 48, 78, .06); }
+.demo-sidebar-head { display: flex; gap: 10px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid #eef2f6; }
+.demo-sidebar-head strong, .demo-sidebar-head span { display: block; }
+.demo-sidebar-head span { color: #7b879c; font-size: 12px; margin-top: 2px; }
+.demo-action { padding: 13px 0; border-bottom: 1px solid #eef2f6; }
+.demo-action-button { display: flex; width: 100%; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.demo-action-button > i { color: #2563eb; font-size: 18px; margin-top: 2px; }
+.demo-action-button strong, .demo-action-button small { display: block; }
+.demo-action-button small { margin-top: 4px; color: #7b879c; font-size: 11px; line-height: 1.45; }
+.demo-sitemap { display: grid; gap: 3px; padding-top: 15px; }
+.demo-sitemap > strong { font-size: 12px; margin-bottom: 5px; }
+.demo-sitemap a { display: grid; grid-template-columns: 18px 1fr auto; gap: 5px; align-items: center; padding: 7px 5px; border-radius: 6px; color: #344054; font-size: 12px; text-decoration: none; }
+.demo-sitemap a:hover, .demo-sitemap a.active { background: #f0f5ff; color: #1d4ed8; }
+.demo-sitemap a i { color: #6882ad; }
+.demo-sitemap a small { color: #98a2b3; font-size: 10px; }
+.demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
+.demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
+@media (max-width: 1050px) { .intelligence-shell { grid-template-columns: 1fr; } .demo-sidebar { position: static; } }
