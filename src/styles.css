@@ -182,6 +182,9 @@
 .global-guide-column .demo-faqs-heading strong { display: flex; align-items: center; gap: 12px; width: 100%; }
 .global-guide-column .demo-sidebar-head strong,
 .global-guide-column .demo-sitemap > strong,
+.global-guide-column .demo-faqs-heading strong { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; flex: none; width: 100%; }
+.global-guide-column .demo-sidebar-head strong,
+.global-guide-column .demo-sitemap > strong,
 .global-guide-column .demo-faqs-heading strong { text-transform: uppercase; }
 .global-guide-column .demo-sidebar-head strong,
 .global-guide-column .demo-sitemap > strong,
