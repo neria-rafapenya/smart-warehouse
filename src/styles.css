@@ -363,3 +363,13 @@ th { font-size: 13px; }
 .global-guide-column .demo-sitemap > div small,
 .global-guide-column .demo-faqs p,
 .global-guide-column .demo-faq-link { color: #888888 !important; }
+
+/* Trial: use the same condensed uppercase treatment in the upper header. */
+.topbar .top-context,
+.topbar .top-menu,
+.topbar .top-actions,
+.topbar .top-brand small {
+  font-family: 'Barlow Condensed', sans-serif;
+  text-transform: uppercase;
+}
+.topbar .top-actions .copilot-btn { font-family: 'Barlow Condensed', sans-serif; }
