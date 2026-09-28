@@ -455,6 +455,10 @@ html { scrollbar-gutter: stable; }
   padding-left: 8px;
   padding-right: 8px;
 }
+.anomaly-table-panel th:nth-child(4),
+.anomaly-table-panel td:nth-child(4) {
+  width: 30%;
+}
 .anomaly-table-panel td:first-child .risk {
   width: auto;
   height: auto;
