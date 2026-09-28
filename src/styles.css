@@ -164,6 +164,16 @@
 .global-guide-column .demo-sitemap > div strong,
 .global-guide-column .demo-faqs-heading strong,
 .global-guide-column .demo-sidebar-head strong { font-size: 15px; }
+.global-guide-column,
+.global-guide-column * { color: #666666; }
+.global-guide-column i,
+.global-guide-column .ai-spark { display: none; }
+.global-guide-column .demo-sidebar-head,
+.global-guide-column .demo-action-button,
+.global-guide-column .demo-faqs-heading,
+.global-guide-column .demo-sidebar-foot { gap: 0; }
+.global-guide-column .demo-sitemap > div { grid-template-columns: 1fr; }
+.global-guide-column .demo-faq-link:hover { color: #666666; }
 .app-content-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 0; margin: -28px -34px -50px; min-height: calc(100vh - 136px); }
 .global-guide-column { min-width: 0; background: #f1f3f6; }
 .global-guide-column, .global-guide-column button, .global-guide-column a { font-family: 'Barlow Condensed', sans-serif; }
