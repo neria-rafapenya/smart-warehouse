@@ -152,7 +152,6 @@ function App() {
       <div className="app-shell">
         <main className="main-area">
           <Header
-            onCopilot={() => setCopilot(true)}
           />
           <GlobalStatusBar />
           <div className="page-content container-fluid">
@@ -243,7 +242,7 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function Header({ onCopilot }) {
+function Header() {
   const location = useLocation();
   const { logout } = useWarehouseData();
   const title =
@@ -274,7 +273,6 @@ function Header({ onCopilot }) {
         </nav>
         <div className="top-actions">
           <button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button>
-          <button className="copilot-btn" onClick={onCopilot}><i className="bi bi-stars" /> Copilot</button>
           <button className="icon-btn" title="Cerrar sesión" onClick={logout}><i className="bi bi-box-arrow-right" /></button>
         </div>
       </div>
