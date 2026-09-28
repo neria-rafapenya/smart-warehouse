@@ -590,7 +590,7 @@ function AnomaliesPage() {
         <table>
           <thead>
             <tr>
-              <th>Severidad</th>
+              <th aria-label="Severidad" />
               <th>Producto</th>
               <th>Pedido</th>
               <th>Qué ha detectado la IA</th>

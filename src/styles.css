@@ -445,6 +445,7 @@ html { scrollbar-gutter: stable; }
 .anomaly-table-panel td:first-child {
   width: 1%;
   white-space: nowrap;
+  padding-left: 8px;
   padding-right: 8px;
 }
 .anomaly-table-panel th:nth-child(6),
