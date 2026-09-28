@@ -551,6 +551,10 @@ function AnomaliesPage() {
     }
   };
   const resolve = (record) => {
+    const confirmed = window.confirm(
+      `¿Confirmas que quieres resolver la anomalía ${record.id}?`,
+    );
+    if (!confirmed) return;
     updateAnomalyStatus(record.id);
     setItems((current) =>
       current.map((item) =>
@@ -660,6 +664,10 @@ function AnomalyDetailPage() {
     setLoading(false);
   }, [key]);
   const resolve = () => {
+    const confirmed = window.confirm(
+      `¿Confirmas que quieres resolver la anomalía ${key}?`,
+    );
+    if (!confirmed) return;
     const updated = updateAnomalyStatus(key);
     if (updated) {
       setRecord(updated);
