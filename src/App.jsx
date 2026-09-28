@@ -596,7 +596,6 @@ function AnomaliesPage() {
               <th>Qué ha detectado la IA</th>
               <th>Propuesta</th>
               <th>Estado</th>
-              <th />
             </tr>
           </thead>
           <tbody>
@@ -625,7 +624,7 @@ function AnomaliesPage() {
                   ))}
                 </td>
                 <td>{anomalySuggestion(item)}</td>
-                <td>
+                <td className="anomaly-actions-cell">
                   <Status
                     tone={isResolved ? "success" : "warning"}
                     iconOnly
@@ -634,8 +633,8 @@ function AnomaliesPage() {
                     <i className={`bi ${isResolved ? "bi-check2" : "bi-clock"}`} aria-hidden="true" />
                     <span className="visually-hidden">{isResolved ? "Resuelta" : "Pendiente"}</span>
                   </Status>
+                  {!isResolved && <button className="text-link anomaly-resolve-button" title="Resolver anomalía" aria-label="Resolver anomalía" onClick={(event) => { event.stopPropagation(); resolve(record); }}><i className="bi bi-check2-circle" aria-hidden="true" /></button>}
                 </td>
-                <td>{!isResolved && <button className="text-link anomaly-resolve-button" title="Resolver anomalía" aria-label="Resolver anomalía" onClick={(event) => { event.stopPropagation(); resolve(record); }}><i className="bi bi-check2-circle" aria-hidden="true" /></button>}</td>
               </tr>;
             })}
           </tbody>

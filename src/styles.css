@@ -455,13 +455,17 @@ html { scrollbar-gutter: stable; }
   padding-left: 4px;
   padding-right: 4px;
 }
-.anomaly-table-panel th:nth-child(7),
-.anomaly-table-panel td:nth-child(7) {
+.anomaly-table-panel .anomaly-actions-cell {
   width: 1%;
   white-space: nowrap;
   padding-left: 4px;
   padding-right: 8px;
+  text-align: left;
 }
+.anomaly-table-panel .anomaly-actions-cell {
+  display: table-cell;
+}
+.anomaly-table-panel .anomaly-actions-cell > * + * { margin-left: 2px; }
 .anomaly-table-panel th:nth-child(4),
 .anomaly-table-panel td:nth-child(4) {
   width: 30%;
