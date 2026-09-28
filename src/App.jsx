@@ -153,8 +153,6 @@ function App() {
         <main className="main-area">
           <Header
             onCopilot={() => setCopilot(true)}
-            onGuide={() => setGuideOpen(true)}
-            session={session}
           />
           <GlobalStatusBar />
           <div className="page-content container-fluid">
@@ -245,7 +243,7 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function Header({ onCopilot, onGuide, session }) {
+function Header({ onCopilot }) {
   const location = useLocation();
   const { logout } = useWarehouseData();
   const title =
@@ -261,7 +259,6 @@ function Header({ onCopilot, onGuide, session }) {
           <span className="brand-mark"><i className="bi bi-boxes" /></span>
           <span>
             <strong>smart<span>warehouse</span></strong>
-            <small>{session?.role || "INTELLIGENCE PLATFORM"}</small>
           </span>
         </NavLink>
         <div className="top-context">
