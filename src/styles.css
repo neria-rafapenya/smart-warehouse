@@ -380,3 +380,4 @@ th { font-size: 13px; }
 .topbar .top-menu .nav-link,
 .topbar .top-actions .copilot-btn { font-size: 16px !important; }
 .topbar .top-menu .nav-link { font-size: 17px !important; }
+.global-status-bar strong { font-size: 28px; }
