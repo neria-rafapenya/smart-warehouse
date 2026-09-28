@@ -443,5 +443,27 @@ html { scrollbar-gutter: stable; }
 }
 .anomaly-table-panel td:nth-child(2) strong { font-size: 16px; }
 .anomaly-table-panel td:nth-child(4) small { font-size: 14px; }
+.anomaly-table-panel .status-icon-only {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+}
+.anomaly-table-panel .status-icon-only i { font-size: 15px; }
+.anomaly-table-panel .anomaly-resolve-button {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  color: #e33427;
+  border-radius: 6px;
+}
+.anomaly-table-panel .anomaly-resolve-button:hover {
+  background: #fff0ef;
+  color: #c52d22;
+}
+.anomaly-table-panel .anomaly-resolve-button i { font-size: 17px; }
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }

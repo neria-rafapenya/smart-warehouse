@@ -362,8 +362,10 @@ const Risk = ({ risk }) => (
     <i className="bi bi-circle-fill" />
   </span>
 );
-const Status = ({ children, tone = "neutral" }) => (
-  <span className={`status status-${tone}`}>{children}</span>
+const Status = ({ children, tone = "neutral", title, iconOnly = false }) => (
+  <span className={`status status-${tone}${iconOnly ? " status-icon-only" : ""}`} title={title}>
+    {children}
+  </span>
 );
 
 function IntelligenceDashboard({ onCopilot }) {
@@ -621,8 +623,17 @@ function AnomaliesPage() {
                   ))}
                 </td>
                 <td>{anomalySuggestion(item)}</td>
-                <td><Status tone={isResolved ? "success" : "warning"}>{isResolved ? "Resuelta" : "Pendiente"}</Status></td>
-                <td>{!isResolved && <button className="text-link anomaly-resolve-button" onClick={(event) => { event.stopPropagation(); resolve(record); }}>Resolver</button>}</td>
+                <td>
+                  <Status
+                    tone={isResolved ? "success" : "warning"}
+                    iconOnly
+                    title={isResolved ? "Anomalía resuelta" : "Pendiente de revisión"}
+                  >
+                    <i className={`bi ${isResolved ? "bi-check2" : "bi-clock"}`} aria-hidden="true" />
+                    <span className="visually-hidden">{isResolved ? "Resuelta" : "Pendiente"}</span>
+                  </Status>
+                </td>
+                <td>{!isResolved && <button className="text-link anomaly-resolve-button" title="Resolver anomalía" aria-label="Resolver anomalía" onClick={(event) => { event.stopPropagation(); resolve(record); }}><i className="bi bi-check2-circle" aria-hidden="true" /></button>}</td>
               </tr>;
             })}
           </tbody>
