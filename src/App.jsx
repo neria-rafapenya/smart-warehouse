@@ -31,7 +31,6 @@ const nav = [
   { to: "/", label: "Resumen IA", icon: "bi-grid-1x2-fill", end: true },
   { to: "/anomalias", label: "Anomalías", icon: "bi-exclamation-triangle" },
   { to: "/demanda", label: "Demanda", icon: "bi-graph-up-arrow" },
-  { to: "/recomendaciones", label: "Recomendaciones", icon: "bi-lightbulb" },
   { to: "/integraciones", label: "Integraciones", icon: "bi-diagram-3" },
 ];
 
@@ -91,10 +90,6 @@ function App() {
               <Route path="/anomalias" element={<AnomaliesPage />} />
               <Route path="/anomalias/:id" element={<AnomalyDetailPage />} />
               <Route path="/demanda" element={<DemandPage />} />
-              <Route
-                path="/recomendaciones"
-                element={<RecommendationsPage />}
-              />
               <Route path="/integraciones" element={<Integrations />} />
             </Routes>
           </div>
@@ -828,16 +823,6 @@ function DemoGuide({ onClose }) {
         <div className="demo-guide-step">
           <span>3</span>
           <div>
-            <strong>Revisa las recomendaciones</strong>
-            <p>
-              La IA propone acciones explicables, pero nunca modifica el ERP/WMS
-              automáticamente.
-            </p>
-          </div>
-        </div>
-        <div className="demo-guide-step">
-          <span>4</span>
-          <div>
             <strong>Pregunta al Copilot</strong>
             <p>
               Consulta inventario, proveedores, alertas y riesgos con datos
@@ -850,7 +835,7 @@ function DemoGuide({ onClose }) {
           <div>
             <strong>Recorrido recomendado</strong>
             <span>
-              Resumen IA → Anomalías → Demanda → Recomendaciones → Integraciones
+              Resumen IA → Anomalías → Demanda → Integraciones
             </span>
           </div>
         </div>
@@ -927,16 +912,6 @@ function DemoSidebar() {
             <small>
               Estima qué puede ocurrir próximamente usando el histórico
               disponible.
-            </small>
-          </span>
-        </div>
-        <div>
-          <i className="bi bi-lightbulb" />
-          <span>
-            <strong>Recomendaciones</strong>
-            <small>
-              Presenta qué acciones conviene valorar, siempre con aprobación
-              humana.
             </small>
           </span>
         </div>
