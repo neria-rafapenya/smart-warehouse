@@ -426,15 +426,6 @@ function IntelligenceDashboard({ onCopilot }) {
   };
   return (
     <main className="intelligence-main">
-        <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA" hideTitle>
-          <Button onClick={runAnomalies} disabled={loading}>
-            <i className="bi bi-stars" />{" "}
-              {loading ? "Analizando…" : "Analizar ahora"}
-          </Button>
-          <Button primary className="copilot-open-btn" onClick={onCopilot}>
-            <i className="bi bi-chat-dots" /> Abrir Copilot
-          </Button>
-        </PageTitle>
         <section className="demo-summary-intro">
           <div className="demo-summary-icon">
             <i className="bi bi-chat-right-text" />
@@ -455,6 +446,15 @@ function IntelligenceDashboard({ onCopilot }) {
             </p>
           </div>
         </section>
+        <div className="dashboard-intro-actions page-actions">
+          <Button onClick={runAnomalies} disabled={loading}>
+            <i className="bi bi-stars" />{" "}
+              {loading ? "Analizando…" : "Analizar ahora"}
+          </Button>
+          <Button primary className="copilot-open-btn" onClick={onCopilot}>
+            <i className="bi bi-chat-dots" /> Abrir Copilot
+          </Button>
+        </div>
         {message && <div className="alert alert-info">{message}</div>}
         <section className="panel intelligence-anomalies-panel">
             <PanelHead
