@@ -117,6 +117,10 @@
 .global-status-bar span { grid-column: 1; color: rgba(255, 255, 255, .86); font-size: 13px; line-height: 1.2; }
 .global-status-bar strong { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: #fff; font: 600 20px 'Space Grotesk'; }
 .global-status-bar small { grid-column: 1; color: rgba(255, 255, 255, .7); font-size: 12px; line-height: 1.2; }
+.global-status-bar > div { display: block; text-align: left; }
+.global-status-bar span { display: inline; }
+.global-status-bar strong { display: inline; margin-left: 14px; vertical-align: baseline; }
+.global-status-bar small { display: block; margin-top: 3px; }
 .demo-action-button small,
 .demo-sitemap > div small,
 .demo-faqs p,
