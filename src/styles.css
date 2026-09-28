@@ -452,7 +452,14 @@ html { scrollbar-gutter: stable; }
 .anomaly-table-panel td:nth-child(6) {
   width: 1%;
   white-space: nowrap;
-  padding-left: 8px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.anomaly-table-panel th:nth-child(7),
+.anomaly-table-panel td:nth-child(7) {
+  width: 1%;
+  white-space: nowrap;
+  padding-left: 4px;
   padding-right: 8px;
 }
 .anomaly-table-panel th:nth-child(4),
@@ -470,16 +477,16 @@ html { scrollbar-gutter: stable; }
 .anomaly-table-panel td:nth-child(4) small { font-size: 14px; }
 .anomaly-table-panel .status-icon-only {
   display: inline-grid;
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   place-items: center;
 }
 .anomaly-table-panel .status-icon-only i { font-size: 15px; }
 .anomaly-table-panel .anomaly-resolve-button {
   display: inline-grid;
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   place-items: center;
   color: #e33427;
