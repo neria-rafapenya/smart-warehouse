@@ -107,6 +107,9 @@
 .demo-summary-intro strong { display: block; margin-bottom: 5px; color: #1d2939; }
 .demo-summary-intro p { margin: 0 0 5px; color: #667085; font-size: 12px; line-height: 1.5; }
 .demo-summary-intro code { padding: 2px 5px; border-radius: 4px; background: #eef2f7; color: #475467; font-size: 11px; }
+.demo-summary-intro { padding: 28px 32px; border-radius: 12px; background: #fff; }
+.demo-summary-intro strong { font-size: 19px; }
+.demo-summary-intro p { font-size: 15px; line-height: 1.55; }
 @media (max-width: 1050px) { .intelligence-shell { grid-template-columns: 1fr; } .demo-sidebar { position: static; } }
 
 /* Full-width application shell and compact reference-style header. */
