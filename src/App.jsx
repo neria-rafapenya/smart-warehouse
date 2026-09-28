@@ -88,6 +88,7 @@ function App() {
                 }
               />
               <Route path="/anomalias" element={<AnomaliesPage />} />
+              <Route path="/anomalias/:id" element={<AnomalyDetailPage />} />
               <Route path="/demanda" element={<DemandPage />} />
               <Route
                 path="/recomendaciones"
@@ -428,7 +429,7 @@ function IntelligenceDashboard({ onCopilot }) {
               subtitle="Qué se desvía, por qué ocurre y qué conviene revisar"
             />
             {ai.anomalies.slice(0, 5).map((item) => (
-              <div className="anomaly-row" key={item.order_id}>
+              <NavLink className="anomaly-row anomaly-detail-link" key={item.order_id} to={`/anomalias/${encodeURIComponent(item.order_id || item.sku)}`}>
                 <div className="anomaly-summary">
                   <Risk risk={item.risk} />
                   <div>
@@ -445,7 +446,7 @@ function IntelligenceDashboard({ onCopilot }) {
                 <Status tone={item.severity === "critical" ? "danger" : "warning"}>
                     {item.severity === "critical" ? "Crítica" : "Revisar"}
                 </Status>
-              </div>
+              </NavLink>
             ))}
             {!loading && !ai.anomalies.length && (
               <p className="text-muted mb-0">
@@ -574,7 +575,7 @@ function AnomaliesPage() {
                   </Status>
                 </td>
                 <td>
-                  <strong>{item.product || item.sku}</strong>
+                  <NavLink className="anomaly-detail-link" to={`/anomalias/${encodeURIComponent(key)}`}><strong>{item.product || item.sku}</strong></NavLink>
                   <small>{item.sku}</small>
                 </td>
                 <td>{item.order_id}</td>
@@ -600,6 +601,31 @@ function AnomaliesPage() {
       </section>
     </>
   );
+}
+
+function AnomalyDetailPage() {
+  const { id } = useParams();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [resolved, setResolved] = useState(false);
+  const key = decodeURIComponent(id);
+  useEffect(() => {
+    warehouseService.aiAnomalies().then(result => {
+      const found = (result.findings || []).find(entry => (entry.order_id || entry.sku) === key);
+      setItem(found || null);
+      try { setResolved(Boolean(JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}")[key])); } catch { setResolved(false); }
+    }).finally(() => setLoading(false));
+  }, [key]);
+  const resolve = () => {
+    const current = JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}");
+    const next = { ...current, [key]: true };
+    localStorage.setItem("smart_warehouse_resolved_anomalies", JSON.stringify(next));
+    setResolved(true);
+  };
+  if (loading) return <section className="panel"><h3>Cargando detalle de la anomalía…</h3></section>;
+  if (!item) return <section className="panel"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink><h3 className="mt-4">Anomalía no encontrada</h3><p className="text-muted">Puede haber desaparecido después de ejecutar un nuevo análisis.</p></section>;
+  const severity = item.severity === "critical" ? "Crítica" : "Aviso";
+  return <><div className="detail-back"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink></div><PageTitle eyebrow="INTELIGENCIA / ANOMALÍA" title={item.product || item.sku}>{!resolved && <Button primary onClick={resolve}><i className="bi bi-check2-circle" /> Resolver</Button>}<Status tone={resolved ? "success" : item.severity === "critical" ? "danger" : "warning"}>{resolved ? "Resuelta" : severity}</Status></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Esta ficha explica el hallazgo para que un responsable pueda decidir qué hacer. La IA no modifica el ERP/WMS.</div><div className="detail-grid"><section className="panel"><PanelHead title="Qué ha detectado la IA" subtitle="Comparación con el comportamiento esperado" /><div className="anomaly-detail-reasons">{(item.reasons || []).map(reason => <div key={reason}><i className="bi bi-exclamation-triangle" /><span>{reason}</span></div>)}</div><div className="detail-metrics mt-4"><div><span>Producto</span><strong>{item.product || "—"}</strong></div><div><span>SKU</span><strong>{item.sku || "—"}</strong></div><div><span>Pedido</span><strong>{item.order_id || "—"}</strong></div><div><span>Severidad</span><Status tone={item.severity === "critical" ? "danger" : "warning"}>{severity}</Status></div></div></section><section className="panel"><PanelHead title="Interpretación y siguiente paso" subtitle="La recomendación debe revisarse antes de actuar" /><div className="anomaly-detail-callout"><i className="bi bi-lightbulb" /><div><strong>Sugerencia de IA</strong><p>{item.suggestion || "Revisar el pedido antes de aprobarlo."}</p></div></div><h4 className="mt-4">Qué debería comprobar el usuario</h4><ul className="anomaly-detail-list"><li>Confirmar que el volumen solicitado es necesario.</li><li>Comparar el precio con el histórico y las ofertas del proveedor.</li><li>Revisar la previsión de demanda y el stock disponible.</li><li>Resolver la anomalía solo cuando la decisión haya sido atendida.</li></ul></section></div><section className="panel"><PanelHead title="Datos utilizados" subtitle="Origen y límites del análisis" /><p className="mb-2">El hallazgo se calcula con datos recibidos desde la sandbox local: pedidos, productos, inventario, demanda histórica y proveedores.</p><p className="text-muted mb-0">Motor actual: análisis determinista local. En producción podrá sustituirse por otro proveedor de IA sin cambiar esta ficha.</p></section></>;
 }
 
 function DemandPage() {

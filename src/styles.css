@@ -75,6 +75,16 @@
 .anomaly-recommendation small { color: #2563eb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .anomaly-recommendation span { margin-top: 3px; color: #667085; font-size: 12px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
 .anomaly-resolved { opacity: .62; }
+.anomaly-detail-link { color: inherit; text-decoration: none; }
+.anomaly-detail-link:hover { color: #1d4ed8; }
+.anomaly-detail-reasons { display: grid; gap: 10px; }
+.anomaly-detail-reasons > div { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 7px; background: #fff8e8; color: #7a5a15; font-size: 13px; line-height: 1.45; }
+.anomaly-detail-reasons i { margin-top: 2px; }
+.anomaly-detail-callout { display: flex; gap: 10px; padding: 14px; border-radius: 8px; background: #eff6ff; color: #344054; }
+.anomaly-detail-callout > i { color: #2563eb; font-size: 18px; }
+.anomaly-detail-callout strong, .anomaly-detail-callout p { display: block; }
+.anomaly-detail-callout p { margin: 4px 0 0; line-height: 1.5; }
+.anomaly-detail-list { padding-left: 20px; color: #667085; line-height: 1.8; }
 @media (max-width: 760px) { .anomaly-row { grid-template-columns: 1fr; gap: 9px; } .anomaly-recommendation { padding-left: 0; border-left: 0; } }
 .demo-summary-intro { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #dbe7fb; border-radius: 10px; background: linear-gradient(135deg, #f7faff, #ffffff); }
 .demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 9px; background: #e7efff; color: #2563eb; }
