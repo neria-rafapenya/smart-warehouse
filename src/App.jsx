@@ -588,12 +588,12 @@ function AnomaliesPage() {
         <table>
           <thead>
             <tr>
-              <th>SEVERIDAD</th>
-              <th>PRODUCTO</th>
-              <th>PEDIDO</th>
-              <th>QUÉ HA DETECTADO LA IA</th>
-              <th>PROPUESTA</th>
-              <th>ESTADO</th>
+              <th>Severidad</th>
+              <th>Producto</th>
+              <th>Pedido</th>
+              <th>Qué ha detectado la IA</th>
+              <th>Propuesta</th>
+              <th>Estado</th>
               <th />
             </tr>
           </thead>

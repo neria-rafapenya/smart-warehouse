@@ -439,7 +439,7 @@ html { scrollbar-gutter: stable; }
 }
 .anomaly-table-panel th {
   font-size: 14px;
-  text-transform: lowercase;
+  text-transform: none;
 }
 .anomaly-table-panel th:first-child,
 .anomaly-table-panel td:first-child {
