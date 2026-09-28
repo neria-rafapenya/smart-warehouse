@@ -128,6 +128,26 @@ class LocalDeterministicAIProvider:
         stock = context.get("stock", [])
         suppliers = context.get("suppliers", [])
         events = context.get("events", [])
+        anomalies = self.detect_anomalies(orders)["findings"]
+        if any(word in query for word in ("anomalía", "anomalia", "riesgo", "desviación", "desviacion", "revisión", "revision", "solución", "solucion")):
+            if not anomalies:
+                return {
+                    "engine": self.name,
+                    "answer": "No he detectado anomalías con las reglas y datos disponibles.",
+                    "data": [],
+                    "sources": ["orders", "anomaly_rules"],
+                }
+            details = [
+                f"{finding['sku']}: {'; '.join(finding['reasons'])} Solución propuesta: {finding['suggestion']}"
+                for finding in anomalies[:5]
+            ]
+            return {
+                "engine": self.name,
+                "answer": f"He detectado {len(anomalies)} anomalías. " + " ".join(details),
+                "data": anomalies[:10],
+                "sources": ["orders", "anomaly_rules", "deterministic_suggestions"],
+                "next_questions": ["¿Qué anomalía es más crítica?", "¿Qué pedidos necesitan revisión humana?"],
+            }
         if any(word in query for word in ("stock", "inventario", "existencias")):
             low = [item for item in stock if item.get("status") == "replenish"]
             answer = f"He encontrado {len(low)} referencias por debajo del mínimo." if low else "No he encontrado referencias por debajo del mínimo configurado."
@@ -140,8 +160,8 @@ class LocalDeterministicAIProvider:
         risky = [order for order in orders if order.get("risk") in ("red", "yellow") or order.get("status") in ("blocked", "human_review")]
         return {
             "engine": self.name,
-            "answer": f"He revisado los datos locales. Hay {len(risky)} pedidos con riesgo o revisión pendiente.",
-            "data": risky[:10],
-            "sources": ["orders", "validation_decisions"],
-            "next_questions": ["¿Qué stock está bajo mínimos?", "¿Qué proveedor tiene mejor valoración?", "¿Qué eventos críticos hay?"],
+            "answer": f"He revisado los datos locales. Hay {len(anomalies)} anomalías deterministas y {len(risky)} pedidos con riesgo o revisión pendiente.",
+            "data": anomalies[:10] or risky[:10],
+            "sources": ["orders", "anomaly_rules", "validation_decisions"],
+            "next_questions": ["¿Qué anomalías necesitan revisión?", "¿Qué stock está bajo mínimos?", "¿Qué proveedor tiene mejor valoración?"],
         }

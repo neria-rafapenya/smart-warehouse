@@ -3976,6 +3976,7 @@ function ProcedureDocumentModal({ open, onClose, onSaved }) {
 function Copilot({ onClose }) {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
+  const [sources, setSources] = useState([]);
   const [sending, setSending] = useState(false);
   const ask = async (event) => {
     event.preventDefault();
@@ -3986,6 +3987,7 @@ function Copilot({ onClose }) {
       setAnswer(
         result.answer || result.message || "No hay una respuesta disponible.",
       );
+      setSources(result.sources || []);
     } catch (error) {
       setAnswer("No se pudo consultar el Copilot: " + error.message);
     } finally {
@@ -4043,6 +4045,11 @@ function Copilot({ onClose }) {
             <div className="chat-answer">
               <small>WAREHOUSE COPILOT · API IA LOCAL</small>
               <p>{answer}</p>
+              {sources.length > 0 && (
+                <span className="chat-sources">
+                  Fuentes: {sources.join(" · ")}
+                </span>
+              )}
             </div>
           )}
         </div>

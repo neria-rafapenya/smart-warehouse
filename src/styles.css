@@ -73,6 +73,7 @@
 .faq-item:last-child { padding-bottom: 4px; border-bottom: 0; }
 .faq-item h3 { margin: 0 0 7px; color: #1d2b44; font-size: 15px; }
 .faq-item p { max-width: 850px; margin: 0; color: #667085; font-size: 13px; line-height: 1.6; }
+.chat-sources { display: block; color: #6f86b3; font-size: 9px; line-height: 1.4; }
 .demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
 .demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
 .intelligence-anomalies-panel { width: 100%; }
