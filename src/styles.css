@@ -445,8 +445,8 @@ html { scrollbar-gutter: stable; }
 .anomaly-table-panel td:first-child {
   width: 1%;
   white-space: nowrap;
-  padding-left: 8px;
-  padding-right: 18px;
+  padding-left: 15px;
+  padding-right: 16px;
 }
 .anomaly-table-panel td:first-child {
   text-align: center;
