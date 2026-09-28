@@ -324,8 +324,8 @@ const PageTitle = ({ title, children }) => (
     <div className="page-actions">{children}</div>
   </div>
 );
-const Button = ({ children, primary = false, ...props }) => (
-  <button className={primary ? "btn-main" : "btn-ghost"} {...props}>
+const Button = ({ children, primary = false, className = "", ...props }) => (
+  <button className={`${primary ? "btn-main" : "btn-ghost"} ${className}`.trim()} {...props}>
     {children}
   </button>
 );
