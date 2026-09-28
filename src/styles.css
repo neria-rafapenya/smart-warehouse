@@ -389,3 +389,4 @@ html { scrollbar-gutter: stable; }
 .topbar .top-menu .nav-link { font-size: 19px !important; }
 .global-status-bar span,
 .global-status-bar strong { font-family: 'Barlow Condensed', sans-serif; }
+.global-status-bar strong { font-size: 31px; }
