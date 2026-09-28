@@ -489,7 +489,7 @@ function IntelligenceDashboard({ onCopilot }) {
               </p>
             )}
         </section>
-        <section className="panel">
+        <section className="panel intelligence-integration-panel">
           <PanelHead
             title="Capa de integración"
             subtitle="Datos recibidos desde el software externo simulado"
