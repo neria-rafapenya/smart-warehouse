@@ -8,12 +8,9 @@ const useWarehouseData = () => useContext(WarehouseContext)
 
 const nav = [
   { to: '/', label: 'Resumen IA', icon: 'bi-grid-1x2-fill', end: true },
-  { to: '/pedidos', label: 'Pedidos y compras', icon: 'bi-cart3', count: '24' },
-  { to: '/stock', label: 'Inventario conectado', icon: 'bi-box-seam' },
-  { to: '/recepcion', label: 'Recepción y almacén', icon: 'bi-arrow-down-square' },
-  { to: '/proveedores', label: 'Proveedores', icon: 'bi-building' },
-  { to: '/documentos', label: 'Documentos y facturas', icon: 'bi-file-earmark-text', count: '3' },
-  { to: '/eventos', label: 'Eventos y alertas', icon: 'bi-activity', count: '7' },
+  { to: '/anomalias', label: 'Anomalías', icon: 'bi-exclamation-triangle' },
+  { to: '/demanda', label: 'Demanda', icon: 'bi-graph-up-arrow' },
+  { to: '/recomendaciones', label: 'Recomendaciones', icon: 'bi-lightbulb' },
   { to: '/integraciones', label: 'Integraciones', icon: 'bi-diagram-3' },
 ]
 
@@ -23,12 +20,6 @@ function App() {
   const [authChecking, setAuthChecking] = useState(true)
   const [data, setData] = useState(emptyData)
   const loadData = () => warehouseService.loadAll().then(setData).catch(error => console.error('No se pudo cargar la API', error))
-  const [newOrderOpen, setNewOrderOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [invoiceOpen, setInvoiceOpen] = useState(false)
-  const [procedureOpen, setProcedureOpen] = useState(false)
-  const [procedurePreset, setProcedurePreset] = useState(null)
-  const [procedureSavedAt, setProcedureSavedAt] = useState(0)
   useEffect(() => { if (localStorage.getItem('smart_warehouse_token')) warehouseService.me().then(setSession).catch(() => localStorage.removeItem('smart_warehouse_token')).finally(() => setAuthChecking(false)); else setAuthChecking(false) }, [])
   useEffect(() => { if (session) loadData() }, [session])
   if (authChecking) return <div className="auth-loading">Comprobando sesión…</div>
@@ -38,21 +29,12 @@ function App() {
       <Header onCopilot={() => setCopilot(true)} session={session} />
       <div className="page-content container"><Routes>
         <Route path="/" element={<IntelligenceDashboard onCopilot={() => setCopilot(true)} />} />
-        <Route path="/pedidos" element={<OrdersWithProcedure onNewOrder={() => setNewOrderOpen(true)} onImport={() => setImportOpen(true)} onCompleteProcedure={order => { setProcedurePreset({ externalId: order.id }); setProcedureOpen(true) }} />} />
-        <Route path="/pedidos/:id" element={<OrderDetailPage procedureRefreshKey={procedureSavedAt} onCompleteProcedure={order => { setProcedurePreset({ externalId: order.id }); setProcedureOpen(true) }} />} />
-        <Route path="/stock" element={<Stock />} />
-        <Route path="/recepcion" element={<ReceivingFromApi />} />
-        <Route path="/proveedores" element={<Suppliers />} />
-        <Route path="/documentos" element={<Documents onUploadInvoice={() => setInvoiceOpen(true)} onUploadProcedure={() => setProcedureOpen(true)} />} />
-        <Route path="/documentos/facturas/:id" element={<InvoiceDetail />} />
-        <Route path="/eventos" element={<Events />} />
+        <Route path="/anomalias" element={<AnomaliesPage />} />
+        <Route path="/demanda" element={<DemandPage />} />
+        <Route path="/recomendaciones" element={<RecommendationsPage />} />
         <Route path="/integraciones" element={<Integrations />} />
       </Routes></div>
     </main>
-    <NewOrderModal open={newOrderOpen} onClose={() => setNewOrderOpen(false)} onSaved={() => { setNewOrderOpen(false); loadData() }} />
-    <ImportOrdersModal open={importOpen} onClose={() => setImportOpen(false)} onSaved={() => { setImportOpen(false); loadData() }} />
-    <InvoiceModal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} onSaved={() => { setInvoiceOpen(false); loadData() }} />
-    <ProcedureDocumentModalPreset open={procedureOpen} preset={procedurePreset} onClose={() => { setProcedureOpen(false); setProcedurePreset(null) }} onSaved={() => { setProcedureOpen(false); setProcedurePreset(null); setProcedureSavedAt(Date.now()); loadData() }} />
     {copilot && <Copilot onClose={() => setCopilot(false)} />}
   </div></WarehouseContext.Provider>
 }
@@ -93,6 +75,12 @@ function IntelligenceDashboard({ onCopilot }) {
     <section className="panel"><PanelHead title="Capa de integración" subtitle="Datos recibidos desde el software externo simulado" /><div className="detail-metrics"><div><span>Productos sincronizados</span><strong>{ai.sandbox?.products?.length || stock.length}</strong></div><div><span>Inventario</span><strong>{ai.sandbox?.inventory?.length || stock.length} referencias</strong></div><div><span>Pedidos importados</span><strong>{ai.sandbox?.purchase_orders?.length || orders.length}</strong></div><div><span>Contrato API</span><strong>/api/v1/sandbox</strong></div></div><p className="text-muted mb-0 mt-3">Esta aplicación no sustituye al ERP/WMS: interpreta sus datos y devuelve alertas y recomendaciones.</p></section>
   </>
 }
+
+function AnomaliesPage() { const [items, setItems] = useState([]); const [loading, setLoading] = useState(true); const [message, setMessage] = useState(''); const load = async run => { setLoading(true); try { const result = run ? await warehouseService.runAIAnomalies() : await warehouseService.aiAnomalies(); setItems(result.findings || []); if (run) setMessage('Análisis ejecutado y guardado en auditoría.') } catch (error) { setMessage(error.message || 'No se pudieron cargar las anomalías') } finally { setLoading(false) } }; useEffect(() => { load(false) }, []); return <><PageTitle eyebrow="INTELIGENCIA / DETECCIÓN" title="Anomalías"><Button primary onClick={() => load(true)} disabled={loading}><i className="bi bi-stars" /> {loading ? 'Analizando…' : 'Analizar ahora'}</Button></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Detectamos desviaciones de volumen, precio y demanda. La IA explica cada hallazgo; la decisión sigue siendo humana.</div>{message && <div className="alert alert-success">{message}</div>}<section className="panel table-panel"><div className="table-meta"><span><strong>{items.length}</strong> anomalías encontradas</span><span className="muted">Motor local determinista</span></div><table><thead><tr><th>SEVERIDAD</th><th>PRODUCTO</th><th>PEDIDO</th><th>QUÉ HA DETECTADO LA IA</th><th>PROPUESTA</th></tr></thead><tbody>{items.map(item => <tr key={item.order_id}><td><Status tone={item.severity === 'critical' ? 'danger' : 'warning'}>{item.severity === 'critical' ? 'Crítica' : 'Aviso'}</Status></td><td><strong>{item.product || item.sku}</strong><small>{item.sku}</small></td><td>{item.order_id}</td><td>{item.reasons?.map(reason => <small className="d-block" key={reason}>{reason}</small>)}</td><td>{item.suggestion}</td></tr>)}</tbody></table>{!loading && !items.length && <p className="text-muted p-3 mb-0">No hay anomalías con los datos actuales.</p>}</section></> }
+
+function DemandPage() { const [result, setResult] = useState(null); const [loading, setLoading] = useState(true); useEffect(() => { warehouseService.aiDemand().then(setResult).catch(() => setResult(null)).finally(() => setLoading(false)) }, []); return <><PageTitle eyebrow="INTELIGENCIA / PLANIFICACIÓN" title="Predicción de demanda"><Button onClick={() => { setLoading(true); warehouseService.aiDemand().then(setResult).finally(() => setLoading(false)) }} disabled={loading}><i className="bi bi-arrow-repeat" /> Actualizar previsión</Button></PageTitle><div className="alert alert-info"><i className="bi bi-lightbulb me-2" />La previsión se calcula con los datos sincronizados del ERP/WMS y muestra el método utilizado.</div><section className="kpi-grid"><div className="kpi-card"><div className="kpi-icon info"><i className="bi bi-graph-up-arrow" /></div><div><span>Próximos 30 días</span><strong>{result?.forecast_quantity || 0}</strong><small>unidades previstas</small></div></div><div className="kpi-card"><div className="kpi-icon success"><i className="bi bi-cpu" /></div><div><span>Método</span><strong>Local</strong><small>sin modelo externo</small></div></div></section><section className="panel"><PanelHead title="Cómo se ha calculado" subtitle={result?.method || 'Cargando…'} /><p className="mb-0">{result?.explanation || 'Estamos obteniendo la previsión desde la capa de integración.'}</p></section><section className="panel table-panel"><div className="table-meta"><strong>Histórico utilizado</strong><span className="muted">Mes · unidades solicitadas</span></div><table><thead><tr><th>MES</th><th>UNIDADES</th></tr></thead><tbody>{(result?.historical_months || []).map(item => <tr key={item.month}><td>{item.month}</td><td><strong>{item.quantity}</strong></td></tr>)}</tbody></table></section></> }
+
+function RecommendationsPage() { const [items, setItems] = useState([]); const [loading, setLoading] = useState(true); useEffect(() => { warehouseService.aiSuggestions().then(result => setItems(result.suggestions || [])).catch(() => setItems([])).finally(() => setLoading(false)) }, []); return <><PageTitle eyebrow="INTELIGENCIA / DECISIONES" title="Recomendaciones"><Button onClick={() => { setLoading(true); warehouseService.aiSuggestions().then(result => setItems(result.suggestions || [])).finally(() => setLoading(false)) }} disabled={loading}><i className="bi bi-arrow-repeat" /> Actualizar</Button></PageTitle><div className="alert alert-warning"><i className="bi bi-person-check me-2" />Estas propuestas no ejecutan cambios automáticamente. Un usuario debe revisarlas y aprobarlas.</div><section className="panel"><PanelHead title="Pendientes de revisión" subtitle={`${items.length} recomendaciones generadas por la IA`} />{items.map((item, index) => <div className="receiving-row" key={`${item.sku}-${index}`}><div className="validation-icon warning"><i className="bi bi-lightbulb" /></div><div><strong>{item.sku || 'Operación general'}</strong><span>{item.message}</span><small className="d-block text-muted">Motivo: {item.reason}</small></div><button className="btn-ghost">Revisar</button></div>)}{!loading && !items.length && <p className="text-muted mb-0">No hay recomendaciones pendientes.</p>}</section></> }
 
 function Dashboard({ onNewOrder }) { const { kpis, orders, events } = useWarehouseData(); const primaryOrder = orders.find(order => order.risk === 'red') || orders[0]; return <><PageTitle eyebrow="CENTRO DE CONTROL · 25 SEP 2025" title="Vista general"><Button><i className="bi bi-calendar3" /> Hoy, 25 sep 2025</Button><Button primary onClick={onNewOrder}><i className="bi bi-plus-lg" /> Nuevo pedido</Button></PageTitle>
   <section className="kpi-grid">{kpis.map(k => <div className="kpi-card" key={k.label}><div className={`kpi-icon ${k.tone}`}><i className={`bi ${k.icon}`} /></div><div><span>{k.label}</span><strong>{k.value}</strong><small className={k.tone === 'danger' ? 'text-danger' : 'text-success'}><i className={`bi ${k.tone === 'danger' ? 'bi-exclamation-circle' : 'bi-arrow-up-right'}`} /> {k.change}</small></div></div>)}</section>
