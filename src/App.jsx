@@ -27,6 +27,83 @@ const emptyData = {
 };
 const useWarehouseData = () => useContext(WarehouseContext);
 
+const ANOMALY_HISTORY_KEY = "smart_warehouse_anomaly_history";
+const ANOMALY_CURRENT_KEY = "smart_warehouse_current_anomalies";
+const LEGACY_RESOLVED_ANOMALIES_KEY = "smart_warehouse_resolved_anomalies";
+
+const readStored = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+};
+
+const anomalySlug = (value) =>
+  String(value || "anomaly")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const anomalyFingerprint = (finding) =>
+  finding.order_id || finding.sku || finding.product || "anomaly";
+
+const anomalyBase = (finding) => anomalySlug(finding.sku || finding.order_id || finding.product);
+
+const recordAnomalyAnalysis = (findings, forceNew = false) => {
+  const current = readStored(ANOMALY_CURRENT_KEY, []);
+  const history = readStored(ANOMALY_HISTORY_KEY, []);
+  if (!forceNew && current.length) {
+    const currentByFingerprint = new Map(
+      current.map((record) => [anomalyFingerprint(record.finding), record]),
+    );
+    const records = findings.map((finding) => {
+      const existing = currentByFingerprint.get(anomalyFingerprint(finding));
+      return existing ? { ...existing, finding } : null;
+    });
+    if (records.every(Boolean)) {
+      localStorage.setItem(ANOMALY_CURRENT_KEY, JSON.stringify(records));
+      return records;
+    }
+  }
+
+  const counts = history.reduce((accumulator, record) => {
+    accumulator[record.base] = (accumulator[record.base] || 0) + 1;
+    return accumulator;
+  }, {});
+  const legacyResolved = readStored(LEGACY_RESOLVED_ANOMALIES_KEY, {});
+  const records = findings.map((finding) => {
+    const base = anomalyBase(finding);
+    counts[base] = (counts[base] || 0) + 1;
+    const fingerprint = anomalyFingerprint(finding);
+    return {
+      id: `${base}-${counts[base]}`,
+      base,
+      finding,
+      status: legacyResolved[fingerprint] ? "resolved" : "pending",
+      createdAt: new Date().toISOString(),
+    };
+  });
+  localStorage.setItem(ANOMALY_HISTORY_KEY, JSON.stringify([...history, ...records]));
+  localStorage.setItem(ANOMALY_CURRENT_KEY, JSON.stringify(records));
+  return records;
+};
+
+const updateAnomalyStatus = (id, status = "resolved") => {
+  const update = (record) =>
+    record.id === id ? { ...record, status, resolvedAt: new Date().toISOString() } : record;
+  const history = readStored(ANOMALY_HISTORY_KEY, []).map(update);
+  const current = readStored(ANOMALY_CURRENT_KEY, []).map(update);
+  localStorage.setItem(ANOMALY_HISTORY_KEY, JSON.stringify(history));
+  localStorage.setItem(ANOMALY_CURRENT_KEY, JSON.stringify(current));
+  return history.find((record) => record.id === id) || null;
+};
+
+const findAnomalyRecord = (id) =>
+  readStored(ANOMALY_HISTORY_KEY, []).find((record) => record.id === id);
+
 const nav = [
   { to: "/", label: "Resumen IA", icon: "bi-grid-1x2-fill", end: true },
   { to: "/anomalias", label: "Anomalías", icon: "bi-exclamation-triangle" },
@@ -315,8 +392,13 @@ function IntelligenceDashboard({ onCopilot }) {
       .then((results) => {
         const value = (index) =>
           results[index].status === "fulfilled" ? results[index].value : null;
+        const anomalyRecords = recordAnomalyAnalysis(value(0)?.findings || []);
         setAi({
-          anomalies: value(0)?.findings || [],
+          anomalies: anomalyRecords.map((record) => ({
+            ...record.finding,
+            anomalyId: record.id,
+            anomalyStatus: record.status,
+          })),
           suggestions: value(1)?.suggestions || [],
           demand: value(2),
           suppliers: value(3)?.ranking || [],
@@ -329,7 +411,15 @@ function IntelligenceDashboard({ onCopilot }) {
     setLoading(true);
     try {
       const result = await warehouseService.runAIAnomalies();
-      setAi((current) => ({ ...current, anomalies: result.findings || [] }));
+      const anomalyRecords = recordAnomalyAnalysis(result.findings || [], true);
+      setAi((current) => ({
+        ...current,
+        anomalies: anomalyRecords.map((record) => ({
+          ...record.finding,
+          anomalyId: record.id,
+          anomalyStatus: record.status,
+        })),
+      }));
       setMessage("Análisis ejecutado y registrado en auditoría.");
     } catch (error) {
       setMessage(error.message || "No se pudo ejecutar el análisis");
@@ -425,7 +515,7 @@ function IntelligenceDashboard({ onCopilot }) {
               subtitle="Qué se desvía, por qué ocurre y qué conviene revisar"
             />
             {ai.anomalies.slice(0, 5).map((item) => (
-              <NavLink className="anomaly-row anomaly-detail-link" key={item.order_id} to={`/anomalias/${encodeURIComponent(item.order_id || item.sku)}`}>
+              <NavLink className="anomaly-row anomaly-detail-link" key={item.anomalyId} to={`/anomalias/${encodeURIComponent(item.anomalyId || item.order_id || item.sku)}`}>
                 <div className="anomaly-summary">
                   <Risk risk={item.risk} />
                   <div>
@@ -493,20 +583,13 @@ function AnomaliesPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [resolved, setResolved] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}"); } catch { return {}; }
-  });
   const load = async (run) => {
     setLoading(true);
     try {
       const result = run
         ? await warehouseService.runAIAnomalies()
         : await warehouseService.aiAnomalies();
-      setItems(result.findings || []);
-      if (run) {
-        setResolved({});
-        localStorage.removeItem("smart_warehouse_resolved_anomalies");
-      }
+      setItems(recordAnomalyAnalysis(result.findings || [], run));
       if (run) setMessage("Análisis ejecutado y guardado en auditoría.");
     } catch (error) {
       setMessage(error.message || "No se pudieron cargar las anomalías");
@@ -514,13 +597,15 @@ function AnomaliesPage() {
       setLoading(false);
     }
   };
-  const resolve = (item) => {
-    const key = item.order_id || item.sku;
-    setResolved((current) => {
-      const next = { ...current, [key]: true };
-      localStorage.setItem("smart_warehouse_resolved_anomalies", JSON.stringify(next));
-      return next;
-    });
+  const resolve = (record) => {
+    updateAnomalyStatus(record.id);
+    setItems((current) =>
+      current.map((item) =>
+        item.id === record.id
+          ? { ...item, status: "resolved", resolvedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
   };
   useEffect(() => {
     load(false);
@@ -543,7 +628,7 @@ function AnomaliesPage() {
         <div className="table-meta">
           <span>
             <strong>{items.length}</strong> anomalías encontradas ·{" "}
-            <strong>{Object.keys(resolved).length}</strong> resueltas
+            <strong>{items.filter((item) => item.status === "resolved").length}</strong> resueltas
           </span>
           <span className="muted">Motor local determinista</span>
         </div>
@@ -560,9 +645,10 @@ function AnomaliesPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => {
-              const key = item.order_id || item.sku;
-              const isResolved = Boolean(resolved[key]);
+            {items.map((record) => {
+              const item = record.finding;
+              const key = record.id;
+              const isResolved = record.status === "resolved";
               return <tr key={key} className={`anomaly-table-row ${isResolved ? "anomaly-resolved" : ""}`} onClick={() => navigate(`/anomalias/${encodeURIComponent(key)}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`/anomalias/${encodeURIComponent(key)}`); }} tabIndex="0" role="link">
                 <td>
                   <Status
@@ -585,7 +671,7 @@ function AnomaliesPage() {
                 </td>
                 <td>{item.suggestion}</td>
                 <td><Status tone={isResolved ? "success" : "warning"}>{isResolved ? "Resuelta" : "Pendiente"}</Status></td>
-                <td>{!isResolved && <button className="text-link anomaly-resolve-button" onClick={(event) => { event.stopPropagation(); resolve(item); }}>Resolver</button>}</td>
+                <td>{!isResolved && <button className="text-link anomaly-resolve-button" onClick={(event) => { event.stopPropagation(); resolve(record); }}>Resolver</button>}</td>
               </tr>;
             })}
           </tbody>
@@ -602,27 +688,23 @@ function AnomaliesPage() {
 
 function AnomalyDetailPage() {
   const { id } = useParams();
-  const [item, setItem] = useState(null);
+  const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [resolved, setResolved] = useState(false);
   const key = decodeURIComponent(id);
   useEffect(() => {
-    warehouseService.aiAnomalies().then(result => {
-      const found = (result.findings || []).find(entry => (entry.order_id || entry.sku) === key);
-      setItem(found || null);
-      try { setResolved(Boolean(JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}")[key])); } catch { setResolved(false); }
-    }).finally(() => setLoading(false));
+    setRecord(findAnomalyRecord(key) || null);
+    setLoading(false);
   }, [key]);
   const resolve = () => {
-    const current = JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}");
-    const next = { ...current, [key]: true };
-    localStorage.setItem("smart_warehouse_resolved_anomalies", JSON.stringify(next));
-    setResolved(true);
+    const updated = updateAnomalyStatus(key);
+    if (updated) setRecord(updated);
   };
   if (loading) return <section className="panel"><h3>Cargando detalle de la anomalía…</h3></section>;
-  if (!item) return <section className="panel"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink><h3 className="mt-4">Anomalía no encontrada</h3><p className="text-muted">Puede haber desaparecido después de ejecutar un nuevo análisis.</p></section>;
+  if (!record) return <section className="panel"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink><h3 className="mt-4">Anomalía no encontrada</h3><p className="text-muted">Esta ficha histórica puede no existir en este navegador o se ha borrado su almacenamiento local.</p></section>;
+  const item = record.finding;
+  const resolved = record.status === "resolved";
   const severity = item.severity === "critical" ? "Crítica" : "Aviso";
-  return <><div className="detail-back"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink></div><PageTitle eyebrow="INTELIGENCIA / ANOMALÍA" title={item.product || item.sku}>{!resolved && <Button primary onClick={resolve}><i className="bi bi-check2-circle" /> Resolver</Button>}<Status tone={resolved ? "success" : item.severity === "critical" ? "danger" : "warning"}>{resolved ? "Resuelta" : severity}</Status></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Esta ficha explica el hallazgo para que un responsable pueda decidir qué hacer. La IA no modifica el ERP/WMS.</div><div className="detail-grid"><section className="panel"><PanelHead title="Qué ha detectado la IA" subtitle="Comparación con el comportamiento esperado" /><div className="anomaly-detail-reasons">{(item.reasons || []).map(reason => <div key={reason}><i className="bi bi-exclamation-triangle" /><span>{reason}</span></div>)}</div><div className="detail-metrics mt-4"><div><span>Producto</span><strong>{item.product || "—"}</strong></div><div><span>SKU</span><strong>{item.sku || "—"}</strong></div><div><span>Pedido</span><strong>{item.order_id || "—"}</strong></div><div><span>Severidad</span><Status tone={item.severity === "critical" ? "danger" : "warning"}>{severity}</Status></div></div></section><section className="panel"><PanelHead title="Interpretación y siguiente paso" subtitle="La recomendación debe revisarse antes de actuar" /><div className="anomaly-detail-callout"><i className="bi bi-lightbulb" /><div><strong>Sugerencia de IA</strong><p>{item.suggestion || "Revisar el pedido antes de aprobarlo."}</p></div></div><h4 className="mt-4">Qué debería comprobar el usuario</h4><ul className="anomaly-detail-list"><li>Confirmar que el volumen solicitado es necesario.</li><li>Comparar el precio con el histórico y las ofertas del proveedor.</li><li>Revisar la previsión de demanda y el stock disponible.</li><li>Resolver la anomalía solo cuando la decisión haya sido atendida.</li></ul></section></div><section className="panel"><PanelHead title="Datos utilizados" subtitle="Origen y límites del análisis" /><p className="mb-2">El hallazgo se calcula con datos recibidos desde la sandbox local: pedidos, productos, inventario, demanda histórica y proveedores.</p><p className="text-muted mb-0">Motor actual: análisis determinista local. En producción podrá sustituirse por otro proveedor de IA sin cambiar esta ficha.</p></section></>;
+  return <><div className="detail-back"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink></div><PageTitle eyebrow="INTELIGENCIA / ANOMALÍA" title={item.product || item.sku}>{!resolved && <Button primary onClick={resolve}><i className="bi bi-check2-circle" /> Resolver</Button>}<Status tone={resolved ? "success" : item.severity === "critical" ? "danger" : "warning"}>{resolved ? "Resuelta" : severity}</Status></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Esta ficha histórica permanece disponible aunque la anomalía se resuelva. Si vuelve a detectarse en otro análisis, se creará otra ficha con otro identificador. La IA no modifica el ERP/WMS.</div><div className="detail-grid"><section className="panel"><PanelHead title="Qué ha detectado la IA" subtitle="Comparación con el comportamiento esperado" /><div className="anomaly-detail-reasons">{(item.reasons || []).map(reason => <div key={reason}><i className="bi bi-exclamation-triangle" /><span>{reason}</span></div>)}</div><div className="detail-metrics mt-4"><div><span>Identificador</span><strong>{record.id}</strong></div><div><span>Producto</span><strong>{item.product || "—"}</strong></div><div><span>SKU</span><strong>{item.sku || "—"}</strong></div><div><span>Pedido</span><strong>{item.order_id || "—"}</strong></div><div><span>Severidad</span><Status tone={item.severity === "critical" ? "danger" : "warning"}>{severity}</Status></div></div></section><section className="panel"><PanelHead title="Interpretación y siguiente paso" subtitle="La recomendación debe revisarse antes de actuar" /><div className="anomaly-detail-callout"><i className="bi bi-lightbulb" /><div><strong>Sugerencia de IA</strong><p>{item.suggestion || "Revisar el pedido antes de aprobarlo."}</p></div></div><h4 className="mt-4">Qué debería comprobar el usuario</h4><ul className="anomaly-detail-list"><li>Confirmar que el volumen solicitado es necesario.</li><li>Comparar el precio con el histórico y las ofertas del proveedor.</li><li>Revisar la previsión de demanda y el stock disponible.</li><li>Resolver la anomalía solo cuando la decisión haya sido atendida.</li></ul></section></div><section className="panel"><PanelHead title="Datos utilizados" subtitle="Origen y límites del análisis" /><p className="mb-2">El hallazgo se calcula con datos recibidos desde la sandbox local: pedidos, productos, inventario, demanda histórica y proveedores.</p><p className="text-muted mb-0">Motor actual: análisis determinista local. En producción podrá sustituirse por otro proveedor de IA sin cambiar esta ficha.</p></section></>;
 }
 
 function DemandPage() {
