@@ -59,7 +59,8 @@
 .demo-sitemap > strong { font-size: 12px; margin-bottom: 5px; }
 .demo-sitemap > div { display: grid; grid-template-columns: 18px 1fr auto; gap: 5px; align-items: center; padding: 7px 5px; border-radius: 6px; color: #344054; font-size: 12px; }
 .demo-sitemap > div i { color: #6882ad; }
-.demo-sitemap > div small { color: #98a2b3; font-size: 10px; }
+.demo-sitemap > div strong, .demo-sitemap > div small { display: block; }
+.demo-sitemap > div small { color: #98a2b3; font-size: 10px; line-height: 1.35; margin-top: 2px; }
 .demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
 .demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
 @media (max-width: 1050px) { .intelligence-shell { grid-template-columns: 1fr; } .demo-sidebar { position: static; } }
