@@ -37,7 +37,7 @@ function App() {
     <main className="main-area">
       <Header onCopilot={() => setCopilot(true)} session={session} />
       <div className="page-content container"><Routes>
-        <Route path="/" element={<IntelligenceDashboard onNewOrder={() => setNewOrderOpen(true)} />} />
+        <Route path="/" element={<IntelligenceDashboard onCopilot={() => setCopilot(true)} />} />
         <Route path="/pedidos" element={<OrdersWithProcedure onNewOrder={() => setNewOrderOpen(true)} onImport={() => setImportOpen(true)} onCompleteProcedure={order => { setProcedurePreset({ externalId: order.id }); setProcedureOpen(true) }} />} />
         <Route path="/pedidos/:id" element={<OrderDetailPage procedureRefreshKey={procedureSavedAt} onCompleteProcedure={order => { setProcedurePreset({ externalId: order.id }); setProcedureOpen(true) }} />} />
         <Route path="/stock" element={<Stock />} />
@@ -72,7 +72,7 @@ const Button = ({ children, primary = false, ...props }) => <button className={p
 const Risk = ({ risk }) => <span className={`risk risk-${risk}`}><i className="bi bi-circle-fill" /></span>
 const Status = ({ children, tone = 'neutral' }) => <span className={`status status-${tone}`}>{children}</span>
 
-function IntelligenceDashboard() {
+function IntelligenceDashboard({ onCopilot }) {
   const { orders, stock, integrations } = useWarehouseData()
   const [ai, setAi] = useState({ anomalies: [], suggestions: [], demand: null, suppliers: [], sandbox: null })
   const [loading, setLoading] = useState(true)
@@ -86,7 +86,7 @@ function IntelligenceDashboard() {
   const runAnomalies = async () => { setLoading(true); try { const result = await warehouseService.runAIAnomalies(); setAi(current => ({ ...current, anomalies: result.findings || [] })); setMessage('Análisis ejecutado y registrado en auditoría.') } catch (error) { setMessage(error.message || 'No se pudo ejecutar el análisis') } finally { setLoading(false) } }
   const connected = integrations.filter(item => item.health?.status === 'available').length
   return <>
-    <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA"><Button onClick={runAnomalies} disabled={loading}><i className="bi bi-stars" /> {loading ? 'Analizando…' : 'Ejecutar análisis'}</Button><Button primary><i className="bi bi-chat-dots" /> Abrir Copilot</Button></PageTitle>
+    <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA"><Button onClick={runAnomalies} disabled={loading}><i className="bi bi-stars" /> {loading ? 'Analizando…' : 'Ejecutar análisis'}</Button><Button primary onClick={onCopilot}><i className="bi bi-chat-dots" /> Abrir Copilot</Button></PageTitle>
     {message && <div className="alert alert-info">{message}</div>}
     <section className="kpi-grid"><div className="kpi-card"><div className="kpi-icon danger"><i className="bi bi-exclamation-triangle" /></div><div><span>Anomalías detectadas</span><strong>{ai.anomalies.length}</strong><small>explicables y auditadas</small></div></div><div className="kpi-card"><div className="kpi-icon warning"><i className="bi bi-lightbulb" /></div><div><span>Recomendaciones</span><strong>{ai.suggestions.length}</strong><small>pendientes de revisión</small></div></div><div className="kpi-card"><div className="kpi-icon info"><i className="bi bi-graph-up-arrow" /></div><div><span>Previsión próxima</span><strong>{ai.demand?.forecast_quantity || 0}</strong><small>unidades · próximos 30 días</small></div></div><div className="kpi-card"><div className="kpi-icon success"><i className="bi bi-plug" /></div><div><span>Conectores activos</span><strong>{connected}</strong><small>{ai.sandbox ? 'sandbox local disponible' : 'comprobando conexión'}</small></div></div></section>
     <div className="detail-grid"><section className="panel"><PanelHead title="Anomalías prioritarias" subtitle="Volumen, precio y comportamiento fuera de patrón" />{ai.anomalies.slice(0, 5).map(item => <div className="receiving-row" key={item.order_id}><Risk risk={item.risk} /><div><strong>{item.product || item.sku}</strong><span>{item.order_id} · {item.reasons?.[0]}</span></div><Status tone={item.severity === 'critical' ? 'danger' : 'warning'}>{item.severity === 'critical' ? 'Crítica' : 'Revisar'}</Status></div>)}{!loading && !ai.anomalies.length && <p className="text-muted mb-0">No se han detectado anomalías con los datos actuales.</p>}</section><section className="panel"><PanelHead title="Sugerencias explicables" subtitle="La IA propone; el usuario decide" />{ai.suggestions.slice(0, 5).map((item, index) => <div className="receiving-row" key={`${item.sku}-${index}`}><div className="validation-icon warning"><i className="bi bi-lightbulb" /></div><div><strong>{item.sku || 'Almacén'}</strong><span>{item.message}</span></div><Status tone="warning">Pendiente</Status></div>)}{!loading && !ai.suggestions.length && <p className="text-muted mb-0">No hay recomendaciones pendientes.</p>}</section></div>
