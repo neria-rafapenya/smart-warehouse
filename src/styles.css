@@ -400,3 +400,8 @@ html { scrollbar-gutter: stable; }
   font-family: 'Barlow Condensed', sans-serif;
   text-transform: uppercase;
 }
+.page-content .page-title h2 { font-size: 29px; }
+.page-content .panel-head h3,
+.page-content .insight-panel h3 { font-size: 19px; }
+.page-content .procedure-panel h3 { font-size: 17px; }
+.page-content .anomaly-recommendation small { font-size: 14px; }
