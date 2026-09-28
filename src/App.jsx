@@ -158,19 +158,21 @@ function App() {
           />
           <GlobalStatusBar />
           <div className="page-content container-fluid">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <IntelligenceDashboard onCopilot={() => setCopilot(true)} />
-                }
-              />
-              <Route path="/anomalias" element={<AnomaliesPage />} />
-              <Route path="/anomalias/:id" element={<AnomalyDetailPage />} />
-              <Route path="/demanda" element={<DemandPage />} />
-              <Route path="/integraciones" element={<Integrations />} />
-              <Route path="/faqs" element={<FaqPage />} />
-            </Routes>
+            <div className="app-content-layout">
+              <aside className="global-guide-column">
+                <DemoSidebar />
+              </aside>
+              <main className="route-content">
+                <Routes>
+                  <Route path="/" element={<IntelligenceDashboard onCopilot={() => setCopilot(true)} />} />
+                  <Route path="/anomalias" element={<AnomaliesPage />} />
+                  <Route path="/anomalias/:id" element={<AnomalyDetailPage />} />
+                  <Route path="/demanda" element={<DemandPage />} />
+                  <Route path="/integraciones" element={<Integrations />} />
+                  <Route path="/faqs" element={<FaqPage />} />
+                </Routes>
+              </main>
+            </div>
           </div>
         </main>
         {copilot && <Copilot onClose={() => setCopilot(false)} />}
@@ -416,8 +418,7 @@ function IntelligenceDashboard({ onCopilot }) {
     }
   };
   return (
-    <div className="intelligence-shell">
-      <main className="intelligence-main">
+    <main className="intelligence-main">
         <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA">
           <Button onClick={runAnomalies} disabled={loading}>
             <i className="bi bi-stars" />{" "}
@@ -511,9 +512,7 @@ function IntelligenceDashboard({ onCopilot }) {
             devuelve alertas y recomendaciones.
           </p>
         </section>
-      </main>
-      <DemoSidebar />
-    </div>
+    </main>
   );
 }
 
