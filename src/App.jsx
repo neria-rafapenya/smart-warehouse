@@ -575,7 +575,7 @@ function AnomaliesPage() {
         hallazgo; la decisión sigue siendo humana.
       </div>
       {message && <div className="alert alert-success">{message}</div>}
-      <section className="panel table-panel">
+      <section className="panel table-panel anomaly-table-panel">
         <div className="table-meta">
           <span>
             <strong>{items.length}</strong> anomalías encontradas ·{" "}

@@ -437,5 +437,9 @@ html { scrollbar-gutter: stable; }
 .intelligence-anomalies-panel .anomaly-row:hover {
   background: #f7f9fc;
 }
+.anomaly-table-panel th {
+  font-size: 14px;
+  text-transform: lowercase;
+}
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
