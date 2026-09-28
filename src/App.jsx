@@ -357,8 +357,8 @@ const Button = ({ children, primary = false, className = "", ...props }) => (
     {children}
   </button>
 );
-const Risk = ({ risk }) => (
-  <span className={`risk risk-${risk}`}>
+const Risk = ({ risk, title }) => (
+  <span className={`risk risk-${risk}`} title={title} aria-label={title} role={title ? "img" : undefined}>
     <i className="bi bi-circle-fill" />
   </span>
 );
@@ -602,13 +602,13 @@ function AnomaliesPage() {
               const item = record.finding;
               const key = record.id;
               const isResolved = record.status === "resolved";
+              const risk = item.severity === "critical" ? "red" : item.severity === "warning" ? "yellow" : "green";
               return <tr key={key} className={`anomaly-table-row ${isResolved ? "anomaly-resolved" : ""}`} onClick={() => navigate(`/anomalias/${encodeURIComponent(key)}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`/anomalias/${encodeURIComponent(key)}`); }} tabIndex="0" role="link">
                 <td>
-                  <Status
-                    tone={item.severity === "critical" ? "danger" : "warning"}
-                  >
-                    {item.severity === "critical" ? "Crítica" : "Aviso"}
-                  </Status>
+                  <Risk
+                    risk={risk}
+                    title={item.severity === "critical" ? "Severidad crítica" : item.severity === "warning" ? "Severidad de aviso" : "Severidad normal"}
+                  />
                 </td>
                 <td>
                   <NavLink className="anomaly-detail-link" to={`/anomalias/${encodeURIComponent(key)}`}><strong>{item.product || item.sku}</strong></NavLink>
