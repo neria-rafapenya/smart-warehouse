@@ -61,6 +61,18 @@
 .demo-sitemap > div i { color: #6882ad; }
 .demo-sitemap > div strong, .demo-sitemap > div small { display: block; }
 .demo-sitemap > div small { color: #98a2b3; font-size: 10px; line-height: 1.35; margin-top: 2px; }
+.demo-faqs { margin-top: 15px; padding: 12px; border: 1px solid #dbeafe; border-radius: 8px; background: #f8fbff; }
+.demo-faqs-heading { display: flex; align-items: center; gap: 7px; color: #344054; font-size: 12px; }
+.demo-faqs-heading i { color: #3876d8; }
+.demo-faqs p { margin: 7px 0 9px; color: #667085; font-size: 10px; line-height: 1.45; }
+.demo-faq-link { display: flex; justify-content: space-between; align-items: center; color: #2864bd; font-size: 11px; font-weight: 600; text-decoration: none; }
+.demo-faq-link:hover { color: #174a96; text-decoration: underline; }
+.faq-panel { display: grid; gap: 0; }
+.faq-item { padding: 18px 4px; border-bottom: 1px solid #eef2f6; }
+.faq-item:first-child { padding-top: 4px; }
+.faq-item:last-child { padding-bottom: 4px; border-bottom: 0; }
+.faq-item h3 { margin: 0 0 7px; color: #1d2b44; font-size: 15px; }
+.faq-item p { max-width: 850px; margin: 0; color: #667085; font-size: 13px; line-height: 1.6; }
 .demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
 .demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
 .intelligence-anomalies-panel { width: 100%; }

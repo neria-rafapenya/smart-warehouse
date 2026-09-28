@@ -168,6 +168,7 @@ function App() {
               <Route path="/anomalias/:id" element={<AnomalyDetailPage />} />
               <Route path="/demanda" element={<DemandPage />} />
               <Route path="/integraciones" element={<Integrations />} />
+              <Route path="/faqs" element={<FaqPage />} />
             </Routes>
           </div>
         </main>
@@ -1007,6 +1008,19 @@ function DemoSidebar() {
           </span>
         </div>
       </div>
+      <div className="demo-faqs">
+        <div className="demo-faqs-heading">
+          <i className="bi bi-question-circle" />
+          <strong>FAQs de la integración</strong>
+        </div>
+        <p>
+          Respuestas rápidas sobre el origen de los datos y la conexión con el
+          ERP/WMS.
+        </p>
+        <NavLink className="demo-faq-link" to="/faqs">
+          Ver preguntas frecuentes <i className="bi bi-arrow-right" />
+        </NavLink>
+      </div>
       <div className="demo-sidebar-foot">
         <i className="bi bi-shield-check" />
         <span>
@@ -1015,6 +1029,54 @@ function DemoSidebar() {
         </span>
       </div>
     </aside>
+  );
+}
+
+function FaqPage() {
+  const faqs = [
+    {
+      question: "¿De dónde proceden los datos de esta demo?",
+      answer:
+        "Proceden de una sandbox local que simula un ERP/WMS: productos, inventario, ventas, pedidos, proveedores y movimientos. Se consultan mediante la API de ejemplo /api/v1/sandbox.",
+    },
+    {
+      question: "¿Cómo se conecta la aplicación al ERP?",
+      answer:
+        "La capa de inteligencia consume un conector con contrato API. En esta demo el conector apunta a FastAPI en localhost; en producción se sustituye por el endpoint, credenciales y formato del ERP o WMS de cada empresa.",
+    },
+    {
+      question: "¿La aplicación modifica el stock o los pedidos?",
+      answer:
+        "No. La aplicación lee y normaliza datos, calcula análisis y presenta alertas explicables. El ERP/WMS sigue siendo la fuente oficial y cualquier acción debe confirmarla un usuario o integrarse explícitamente mediante una operación autorizada.",
+    },
+    {
+      question: "¿Qué ocurre cuando conectemos un ERP real?",
+      answer:
+        "Se mantiene la misma interfaz de inteligencia. Solo cambia el adaptador de entrada: puede ser una API REST, una exportación programada, un webhook o un conector específico. Los datos se transforman al modelo normalizado antes del análisis.",
+    },
+    {
+      question: "¿La IA usa datos reales o de prueba?",
+      answer:
+        "En esta demo usa datos de prueba locales y un motor determinista para que el resultado sea reproducible. Más adelante se puede conectar un proveedor de IA a demanda, manteniendo la trazabilidad de los datos utilizados.",
+    },
+  ];
+  return (
+    <>
+      <PageTitle eyebrow="GUÍA / INTEGRACIÓN" title="Preguntas frecuentes" />
+      <div className="alert alert-info">
+        <i className="bi bi-info-circle me-2" />
+        Esta sección explica cómo entra la información en la aplicación y qué
+        límites tiene la demo frente a un ERP o WMS corporativo.
+      </div>
+      <section className="panel faq-panel">
+        {faqs.map((faq) => (
+          <article className="faq-item" key={faq.question}>
+            <h3>{faq.question}</h3>
+            <p>{faq.answer}</p>
+          </article>
+        ))}
+      </section>
+    </>
   );
 }
 
