@@ -442,5 +442,6 @@ html { scrollbar-gutter: stable; }
   text-transform: lowercase;
 }
 .anomaly-table-panel td:nth-child(2) strong { font-size: 16px; }
+.anomaly-table-panel td:nth-child(4) small { font-size: 14px; }
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
