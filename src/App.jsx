@@ -443,9 +443,10 @@ function IntelligenceDashboard({ onCopilot }) {
             <strong>Qué estás viendo en esta demo</strong>
             <p>
               Esta demo muestra cómo añadir inteligencia a un sistema de
-              gestión de almacén que la empresa ya utiliza. Su objetivo es
-              convertir los datos operativos en señales claras para detectar
-              problemas y tomar mejores decisiones.
+              gestión de almacén que la empresa ya utiliza. Analizamos sus
+              pedidos y los contrastamos con precios, cantidades, demanda,
+              stock y proveedores para detectar problemas y tomar mejores
+              decisiones.
             </p>
             <p className="mb-0">
               Ayuda a identificar anomalías, anticipar cambios en la demanda y
