@@ -595,7 +595,7 @@ function AnomaliesPage() {
               <th>Pedido</th>
               <th>Qué ha detectado la IA</th>
               <th>Propuesta</th>
-              <th>Estado</th>
+              <th aria-label="Estado" />
             </tr>
           </thead>
           <tbody>
