@@ -383,3 +383,4 @@ th { font-size: 13px; }
 .global-status-bar strong { font-size: 28px; }
 .topbar .top-brand strong { font-size: 20px; }
 .topbar .top-brand strong span { font-size: inherit; }
+.topbar .top-menu .nav-link.active { background: transparent; color: #e33427; }
