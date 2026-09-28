@@ -52,6 +52,34 @@ const anomalyFingerprint = (finding) =>
 
 const anomalyBase = (finding) => anomalySlug(finding.sku || finding.order_id || finding.product);
 
+const anomalySuggestion = (finding) => {
+  const reasons = (finding.reasons || []).map((reason) => reason.toLowerCase());
+  const oldSuggestion = !finding.suggestion || finding.suggestion.startsWith("Revisión humana antes de aprobar");
+  if (!oldSuggestion) return finding.suggestion;
+
+  const hasPrice = reasons.some((reason) => reason.includes("precio unitario"));
+  const hasVolume = reasons.some((reason) => reason.includes("volumen"));
+  const hasDemand = reasons.some((reason) => reason.includes("demanda prevista"));
+  const quantity = Number(finding.requested_quantity || 0);
+  const demand = Number(finding.demand_quantity || 0);
+  const price = Number(finding.unit_price || 0);
+  const referencePrice = Number(finding.reference_unit_price || 0);
+
+  if (hasPrice && hasVolume) {
+    return `No aprobar todavía: validar las ${quantity} uds. y negociar el precio (${price.toFixed(2)} EUR frente a ${referencePrice.toFixed(2)} EUR de referencia).`;
+  }
+  if (hasPrice) {
+    return `Solicitar confirmación del proveedor antes de aprobar: el precio (${price.toFixed(2)} EUR) supera la referencia (${referencePrice.toFixed(2)} EUR).`;
+  }
+  if (hasDemand) {
+    return `Revisar la previsión antes de comprar: ${quantity} uds. superan la demanda prevista de ${demand} uds.`;
+  }
+  if (hasVolume) {
+    return "Validar la necesidad del volumen solicitado y confirmar que no duplica una compra existente.";
+  }
+  return "Revisar el pedido y confirmar la causa de la desviación antes de aprobarlo.";
+};
+
 const recordAnomalyAnalysis = (findings, forceNew = false) => {
   const current = readStored(ANOMALY_CURRENT_KEY, []);
   const history = readStored(ANOMALY_HISTORY_KEY, []);
@@ -445,7 +473,7 @@ function IntelligenceDashboard({ onCopilot }) {
                 </div>
                 <div className="anomaly-recommendation">
                   <small>Sugerencia de IA</small>
-                  <span>{item.suggestion || "Revisar antes de aprobar."}</span>
+                  <span>{anomalySuggestion(item)}</span>
                 </div>
                 <Status tone={item.severity === "critical" ? "danger" : "warning"}>
                     {item.severity === "critical" ? "Crítica" : "Revisar"}
@@ -588,7 +616,7 @@ function AnomaliesPage() {
                     </small>
                   ))}
                 </td>
-                <td>{item.suggestion}</td>
+                <td>{anomalySuggestion(item)}</td>
                 <td><Status tone={isResolved ? "success" : "warning"}>{isResolved ? "Resuelta" : "Pendiente"}</Status></td>
                 <td>{!isResolved && <button className="text-link anomaly-resolve-button" onClick={(event) => { event.stopPropagation(); resolve(record); }}>Resolver</button>}</td>
               </tr>;
@@ -623,7 +651,7 @@ function AnomalyDetailPage() {
   const item = record.finding;
   const resolved = record.status === "resolved";
   const severity = item.severity === "critical" ? "Crítica" : "Aviso";
-  return <><div className="detail-back"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink></div><PageTitle eyebrow="INTELIGENCIA / ANOMALÍA" title={item.product || item.sku}>{!resolved && <Button primary className="resolve-btn" onClick={resolve}><i className="bi bi-check2-circle" /> Resolver</Button>}<Status tone={resolved ? "success" : item.severity === "critical" ? "danger" : "warning"}>{resolved ? "Resuelta" : severity}</Status></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Esta ficha histórica permanece disponible aunque la anomalía se resuelva. Si vuelve a detectarse en otro análisis, se creará otra ficha con otro identificador. La IA no modifica el ERP/WMS.</div><div className="detail-grid"><section className="panel"><PanelHead title="Qué ha detectado la IA" subtitle="Comparación con el comportamiento esperado" /><div className="anomaly-detail-reasons">{(item.reasons || []).map(reason => <div key={reason}><i className="bi bi-exclamation-triangle" /><span>{reason}</span></div>)}</div><div className="detail-metrics mt-4"><div><span>Identificador</span><strong>{record.id}</strong></div><div><span>Producto</span><strong>{item.product || "—"}</strong></div><div><span>SKU</span><strong>{item.sku || "—"}</strong></div><div><span>Pedido</span><strong>{item.order_id || "—"}</strong></div><div><span>Severidad</span><Status tone={item.severity === "critical" ? "danger" : "warning"}>{severity}</Status></div></div></section><section className="panel"><PanelHead title="Interpretación y siguiente paso" subtitle="La recomendación debe revisarse antes de actuar" /><div className="anomaly-detail-callout"><i className="bi bi-lightbulb" /><div><strong>Sugerencia de IA</strong><p>{item.suggestion || "Revisar el pedido antes de aprobarlo."}</p></div></div><h4 className="mt-4">Qué debería comprobar el usuario</h4><ul className="anomaly-detail-list"><li>Confirmar que el volumen solicitado es necesario.</li><li>Comparar el precio con el histórico y las ofertas del proveedor.</li><li>Revisar la previsión de demanda y el stock disponible.</li><li>Resolver la anomalía solo cuando la decisión haya sido atendida.</li></ul></section></div><section className="panel"><PanelHead title="Datos utilizados" subtitle="Origen y límites del análisis" /><p className="mb-2">El hallazgo se calcula con datos recibidos desde la sandbox local: pedidos, productos, inventario, demanda histórica y proveedores.</p><p className="text-muted mb-0">Motor actual: análisis determinista local. En producción podrá sustituirse por otro proveedor de IA sin cambiar esta ficha.</p></section></>;
+  return <><div className="detail-back"><NavLink to="/anomalias"><i className="bi bi-arrow-left" /> Volver a anomalías</NavLink></div><PageTitle eyebrow="INTELIGENCIA / ANOMALÍA" title={item.product || item.sku}>{!resolved && <Button primary className="resolve-btn" onClick={resolve}><i className="bi bi-check2-circle" /> Resolver</Button>}<Status tone={resolved ? "success" : item.severity === "critical" ? "danger" : "warning"}>{resolved ? "Resuelta" : severity}</Status></PageTitle><div className="alert alert-info"><i className="bi bi-info-circle me-2" />Esta ficha histórica permanece disponible aunque la anomalía se resuelva. Si vuelve a detectarse en otro análisis, se creará otra ficha con otro identificador. La IA no modifica el ERP/WMS.</div><div className="detail-grid"><section className="panel"><PanelHead title="Qué ha detectado la IA" subtitle="Comparación con el comportamiento esperado" /><div className="anomaly-detail-reasons">{(item.reasons || []).map(reason => <div key={reason}><i className="bi bi-exclamation-triangle" /><span>{reason}</span></div>)}</div><div className="detail-metrics mt-4"><div><span>Identificador</span><strong>{record.id}</strong></div><div><span>Producto</span><strong>{item.product || "—"}</strong></div><div><span>SKU</span><strong>{item.sku || "—"}</strong></div><div><span>Pedido</span><strong>{item.order_id || "—"}</strong></div><div><span>Severidad</span><Status tone={item.severity === "critical" ? "danger" : "warning"}>{severity}</Status></div></div></section><section className="panel"><PanelHead title="Interpretación y siguiente paso" subtitle="La recomendación debe revisarse antes de actuar" /><div className="anomaly-detail-callout"><i className="bi bi-lightbulb" /><div><strong>Sugerencia de IA</strong><p>{anomalySuggestion(item)}</p></div></div><h4 className="mt-4">Qué debería comprobar el usuario</h4><ul className="anomaly-detail-list"><li>Confirmar que el volumen solicitado es necesario.</li><li>Comparar el precio con el histórico y las ofertas del proveedor.</li><li>Revisar la previsión de demanda y el stock disponible.</li><li>Resolver la anomalía solo cuando la decisión haya sido atendida.</li></ul></section></div><section className="panel"><PanelHead title="Datos utilizados" subtitle="Origen y límites del análisis" /><p className="mb-2">El hallazgo se calcula con datos recibidos desde la sandbox local: pedidos, productos, inventario, demanda histórica y proveedores.</p><p className="text-muted mb-0">Motor actual: análisis determinista local. En producción podrá sustituirse por otro proveedor de IA sin cambiar esta ficha.</p></section></>;
 }
 
 function DemandPage() {
