@@ -413,16 +413,15 @@ function IntelligenceDashboard({ onCopilot }) {
           <div>
             <strong>Qué estás viendo en esta demo</strong>
             <p>
-              Una capa de inteligencia que se conecta a un ERP o WMS existente
-              para interpretar su operación. Los datos proceden de la sandbox
-              local, que simula productos, inventario, ventas, pedidos y
-              proveedores mediante la API <code>/api/v1/sandbox</code>.
+              Esta demo muestra cómo añadir inteligencia a un sistema de
+              gestión de almacén que la empresa ya utiliza. Su objetivo es
+              convertir los datos operativos en señales claras para detectar
+              problemas y tomar mejores decisiones.
             </p>
             <p className="mb-0">
-              La aplicación no sustituye al sistema de almacén ni modifica sus
-              datos: analiza la información, detecta anomalías, calcula
-              previsiones y propone recomendaciones explicables para que un
-              usuario las revise.
+              Ayuda a identificar anomalías, anticipar cambios en la demanda y
+              proponer acciones explicables. El usuario conserva siempre la
+              decisión y el sistema de gestión sigue siendo la fuente oficial.
             </p>
           </div>
         </section>
