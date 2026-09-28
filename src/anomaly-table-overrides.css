@@ -1,0 +1,4 @@
+.anomaly-table-panel th:nth-child(6),
+.anomaly-table-panel td:nth-child(6) {
+  min-width: 100px;
+}

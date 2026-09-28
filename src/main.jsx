@@ -8,6 +8,7 @@ import './detail.css'
 import './topnav.css'
 import './dropdown.css'
 import './modals.css'
+import './anomaly-table-overrides.css'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(
