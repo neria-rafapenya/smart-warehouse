@@ -301,7 +301,7 @@ def _extract_invoice(content: bytes) -> dict:
     return extracted
 
 
-def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None, auth_repository_provider: Callable[[], object] | None = None, auth_secret: str = "local-only-change-before-production", auth_token_ttl_seconds: int = 28800, integration_service_provider: Callable[[], IntegrationService] | None = None) -> APIRouter:
+def build_router(service_provider: Callable[[], WarehouseService], environment: str, ai_service_provider: Callable[[], AIService] | None = None, auth_repository_provider: Callable[[], object] | None = None, auth_secret: str = "local-only-change-before-production", auth_token_ttl_seconds: int = 28800, integration_service_provider: Callable[[], IntegrationService] | None = None, ai_status_provider: Callable[[], dict] | None = None) -> APIRouter:
     router = APIRouter()
 
     def service() -> WarehouseService:
@@ -372,6 +372,12 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
     @router.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
         return HealthResponse(status="ok", service="smart-warehouse-api", environment=environment)
+
+    @router.get("/ai/status", tags=["ai"])
+    def ai_status():
+        if ai_status_provider is None:
+            raise HTTPException(status_code=503, detail="Estado de IA no configurado")
+        return ai_status_provider()
 
     @router.get("/dashboard", tags=["dashboard"])
     def dashboard(current: Annotated[WarehouseService, Depends(service)]):

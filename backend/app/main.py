@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from .adapters.inbound.api import build_router
 from .adapters.ai.local_provider import LocalDeterministicAIProvider
+from .adapters.ai.bedrock_provider import BedrockAIProvider
 from .adapters.outbound.mysql_repository import MySQLWarehouseRepository
 from .application.ai_service import AIService
 from .application.integrations import IntegrationService
@@ -87,13 +88,30 @@ def create_app() -> FastAPI:
     def ai_service_provider() -> AIService:
         repository = MySQLWarehouseRepository(settings)
         integration = IntegrationService(repository)
-        return AIService(repository, LocalDeterministicAIProvider(), context_provider=integration.ai_context)
+        provider = LocalDeterministicAIProvider()
+        if settings.ai_external_enabled and settings.ai_provider.lower() == "bedrock":
+            provider = BedrockAIProvider(
+                model_id=settings.bedrock_model_id,
+                region_name=settings.aws_region,
+                max_tokens=settings.ai_max_tokens,
+                temperature=settings.ai_temperature,
+            )
+        return AIService(repository, provider, context_provider=integration.ai_context)
+
+    def ai_status() -> dict:
+        external = settings.ai_external_enabled and settings.ai_provider.lower() == "bedrock"
+        return {
+            "provider": "bedrock" if external else "local_deterministic",
+            "external_enabled": external,
+            "model_id": settings.bedrock_model_id if external else None,
+            "invocation_mode": "on_demand",
+        }
 
     def integration_service_provider() -> IntegrationService:
         return IntegrationService(MySQLWarehouseRepository(settings))
 
     app.add_middleware(AuthorizationMiddleware, settings=settings, repository_provider=lambda: MySQLWarehouseRepository(settings))
-    app.include_router(build_router(service_provider, settings.environment, ai_service_provider, lambda: MySQLWarehouseRepository(settings), settings.auth_secret, settings.auth_token_ttl_seconds, integration_service_provider), prefix=settings.api_prefix)
+    app.include_router(build_router(service_provider, settings.environment, ai_service_provider, lambda: MySQLWarehouseRepository(settings), settings.auth_secret, settings.auth_token_ttl_seconds, integration_service_provider, ai_status), prefix=settings.api_prefix)
     return app
 
 

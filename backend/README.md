@@ -8,6 +8,24 @@ La integración prevista es **React → FastAPI REST → casos de uso → reposi
 
 La IA se ejecuta inicialmente con `LocalDeterministicAIProvider`: reglas explicables y estadística descriptiva sobre los datos de MySQL local. No realiza llamadas a AWS ni consume modelos externos. El proveedor está detrás del puerto `AIProvider`, por lo que posteriormente se podrá añadir Bedrock u otro proveedor sin cambiar los casos de uso ni la API.
 
+El proveedor se selecciona por configuración y el modo seguro por defecto es local:
+
+```env
+AI_PROVIDER=local
+AI_EXTERNAL_ENABLED=false
+```
+
+Para activar Bedrock de forma explícita en un entorno autorizado:
+
+```env
+AI_PROVIDER=bedrock
+AI_EXTERNAL_ENABLED=true
+AWS_REGION=eu-west-1
+BEDROCK_MODEL_ID=<modelo-autorizado>
+```
+
+El backend usa las credenciales estándar de AWS y, en producción, debe recibir un IAM Role. No se envían credenciales al frontend. Las invocaciones son bajo demanda desde los endpoints de análisis o Copilot; `GET /api/v1/ai/status` permite comprobar el proveedor activo. Para cortar de nuevo el consumo externo basta con `AI_EXTERNAL_ENABLED=false` y reiniciar la API.
+
 Casos disponibles en local:
 
 - `GET /api/v1/ai/anomalies` — anomalías de volumen y precio.

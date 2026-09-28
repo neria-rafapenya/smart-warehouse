@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     auth_secret: str = "local-only-change-before-production"
     auth_token_ttl_seconds: int = 28800
+    ai_provider: str = "local"
+    ai_external_enabled: bool = False
+    aws_region: str = "eu-west-1"
+    bedrock_model_id: str = ""
+    ai_max_tokens: int = 1200
+    ai_temperature: float = 0.1
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
