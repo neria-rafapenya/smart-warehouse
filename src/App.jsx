@@ -346,7 +346,7 @@ function IntelligenceDashboard({ onCopilot }) {
         <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA">
           <Button onClick={runAnomalies} disabled={loading}>
             <i className="bi bi-stars" />{" "}
-            {loading ? "Analizando…" : "Ejecutar análisis"}
+              {loading ? "Analizando…" : "Analizar ahora"}
           </Button>
           <Button primary onClick={onCopilot}>
             <i className="bi bi-chat-dots" /> Abrir Copilot
@@ -841,7 +841,7 @@ function DemoGuide({ onClose }) {
         </div>
         <small className="text-muted d-block mt-3">
           Para probarlo localmente: arranca FastAPI en el puerto 8000, inicia el
-          frontend y pulsa “Ejecutar análisis”.
+          frontend y pulsa “Analizar ahora”.
         </small>
       </div>
     </ModalShell>
@@ -863,7 +863,7 @@ function DemoSidebar() {
         <div className="demo-action-button">
           <i className="bi bi-stars" />
           <span>
-            <strong>Ejecutar análisis</strong>
+            <strong>Analizar ahora</strong>
             <small>
               Revisa los datos sincronizados y busca patrones anómalos de
               volumen, precio, stock y demanda.
