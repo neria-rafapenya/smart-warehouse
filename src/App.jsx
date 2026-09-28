@@ -460,6 +460,8 @@ function IntelligenceDashboard({ onCopilot }) {
             <PanelHead
               title="Anomalías prioritarias"
               subtitle="Qué se desvía, por qué ocurre y qué conviene revisar"
+              action="Ver listado completo"
+              actionTo="/anomalias"
             />
             {ai.anomalies.slice(0, 5).map((item) => (
               <NavLink className="anomaly-row anomaly-detail-link" key={item.anomalyId} to={`/anomalias/${encodeURIComponent(item.anomalyId || item.order_id || item.sku)}`}>
@@ -1148,18 +1150,22 @@ function Dashboard({ onNewOrder }) {
   );
 }
 
-function PanelHead({ title, subtitle, action }) {
+function PanelHead({ title, subtitle, action, actionTo }) {
   return (
     <div className="panel-head">
       <div>
         <h3>{title}</h3>
         <p>{subtitle}</p>
       </div>
-      {action && (
+      {action && (actionTo ? (
+        <NavLink className="text-link" to={actionTo}>
+          {action} <i className="bi bi-arrow-up-right" />
+        </NavLink>
+      ) : (
         <button className="text-link">
           {action} <i className="bi bi-arrow-up-right" />
         </button>
-      )}
+      ))}
     </div>
   );
 }
