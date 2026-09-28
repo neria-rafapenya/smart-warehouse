@@ -437,7 +437,7 @@ function IntelligenceDashboard({ onCopilot }) {
         </PageTitle>
         <section className="demo-summary-intro">
           <div className="demo-summary-icon">
-            <i className="bi bi-stars" />
+            <i className="bi bi-chat-right-text" />
           </div>
           <div>
             <strong>Qué estás viendo en esta demo</strong>

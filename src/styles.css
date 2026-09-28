@@ -103,7 +103,7 @@
 .anomaly-detail-list { padding-left: 20px; color: #667085; line-height: 1.8; }
 @media (max-width: 760px) { .anomaly-row { grid-template-columns: 1fr; gap: 9px; } .anomaly-recommendation { padding-left: 0; border-left: 0; } }
 .demo-summary-intro { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #dbe7fb; border-radius: 10px; background: linear-gradient(135deg, #f7faff, #ffffff); }
-.demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 9px; background: #e7efff; color: #2563eb; }
+.demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 0; background: transparent; color: #2563eb; }
 .demo-summary-intro strong { display: block; margin-bottom: 5px; color: #1d2939; }
 .demo-summary-intro p { margin: 0 0 5px; color: #667085; font-size: 12px; line-height: 1.5; }
 .demo-summary-intro code { padding: 2px 5px; border-radius: 4px; background: #eef2f7; color: #475467; font-size: 11px; }
