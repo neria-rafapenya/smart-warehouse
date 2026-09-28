@@ -346,9 +346,9 @@ function GlobalStatusBar() {
   );
 }
 
-const PageTitle = ({ title, children }) => (
+const PageTitle = ({ title, children, hideTitle = false }) => (
   <div className="page-title">
-    <div><h2>{title}</h2></div>
+    <div>{!hideTitle && <h2>{title}</h2>}</div>
     <div className="page-actions">{children}</div>
   </div>
 );
@@ -426,7 +426,7 @@ function IntelligenceDashboard({ onCopilot }) {
   };
   return (
     <main className="intelligence-main">
-        <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA">
+        <PageTitle eyebrow="INTELIGENCIA OPERATIVA" title="Resumen IA" hideTitle>
           <Button onClick={runAnomalies} disabled={loading}>
             <i className="bi bi-stars" />{" "}
               {loading ? "Analizando…" : "Analizar ahora"}
