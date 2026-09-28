@@ -338,3 +338,6 @@ th { font-size: 13px; }
 .global-guide-column .demo-sidebar-foot span,
 .global-guide-column .demo-faq-link,
 .global-guide-column .demo-faq-link:hover { color: #e33427 !important; }
+.global-guide-column .demo-sidebar-head strong,
+.global-guide-column .demo-sitemap > strong,
+.global-guide-column .demo-faqs-heading strong { color: #e33427 !important; }
