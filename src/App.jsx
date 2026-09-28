@@ -749,7 +749,7 @@ function DemandPage() {
             "Estamos obteniendo la previsión desde la capa de integración."}
         </p>
       </section>
-      <section className="panel table-panel">
+      <section className="panel table-panel demand-history-panel">
         <div className="table-meta">
           <strong>Histórico utilizado</strong>
           <span className="muted">Mes · unidades solicitadas</span>
