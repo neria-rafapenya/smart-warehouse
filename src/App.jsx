@@ -958,13 +958,6 @@ function DemoSidebar() {
           Ver preguntas frecuentes <i className="bi bi-arrow-right" />
         </NavLink>
       </div>
-      <div className="demo-sidebar-foot">
-        <i className="bi bi-shield-check" />
-        <span>
-          La IA recomienda. El usuario decide y el ERP/WMS sigue siendo la
-          fuente oficial.
-        </span>
-      </div>
     </aside>
   );
 }
