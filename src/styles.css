@@ -319,3 +319,15 @@ th { font-size: 13px; }
 .faq-item p,
 .chat-sources,
 .top-actions .copilot-btn { font-size: 13px; }
+
+/* Compact vertical rhythm while keeping each heading's line tied to its own text. */
+.global-guide-column .demo-sidebar-head strong,
+.global-guide-column .demo-sitemap > strong,
+.global-guide-column .demo-faqs-heading strong { display: flex; align-items: center; gap: 12px; flex: none; width: 100%; }
+.global-guide-column .demo-sitemap > strong::after { display: block; }
+.global-guide-column .demo-sidebar-head { padding-bottom: 10px; }
+.global-guide-column .demo-action { padding: 9px 0; }
+.global-guide-column .demo-sitemap { gap: 1px; padding-top: 10px; }
+.global-guide-column .demo-sitemap > div { padding: 4px 5px; }
+.global-guide-column .demo-faqs { margin-top: 10px; padding-top: 10px; }
+.global-guide-column .demo-sidebar-foot { margin-top: 10px; padding-top: 8px; }
