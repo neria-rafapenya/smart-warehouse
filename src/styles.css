@@ -416,5 +416,8 @@ html { scrollbar-gutter: stable; }
   background: transparent;
 }
 .intelligence-anomalies-panel .risk i { font-size: 14px; }
+.intelligence-anomalies-panel .risk.risk-yellow i { color: #e19b17; }
+.intelligence-anomalies-panel .risk.risk-red i { color: #e05252; }
+.intelligence-anomalies-panel .risk.risk-green i { color: #18a86b; }
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
