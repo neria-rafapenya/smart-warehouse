@@ -423,5 +423,15 @@ html { scrollbar-gutter: stable; }
 .intelligence-anomalies-panel .risk.risk-red i { color: #e05252; }
 .intelligence-anomalies-panel .risk.risk-green i { color: #18a86b; }
 .intelligence-integration-panel { margin-top: 18px; }
+.anomalies-list-link {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+  color: #e33427 !important;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
 .copilot-open-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }
 .resolve-btn { background: #f0c118; color: #fff; box-shadow: 0 3px 7px rgba(240, 193, 24, .25); }

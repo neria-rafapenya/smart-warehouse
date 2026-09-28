@@ -460,8 +460,6 @@ function IntelligenceDashboard({ onCopilot }) {
             <PanelHead
               title="Anomalías prioritarias"
               subtitle="Qué se desvía, por qué ocurre y qué conviene revisar"
-              action="Ver listado completo"
-              actionTo="/anomalias"
             />
             {ai.anomalies.slice(0, 5).map((item) => (
               <NavLink className="anomaly-row anomaly-detail-link" key={item.anomalyId} to={`/anomalias/${encodeURIComponent(item.anomalyId || item.order_id || item.sku)}`}>
@@ -488,6 +486,9 @@ function IntelligenceDashboard({ onCopilot }) {
                 No se han detectado anomalías con los datos actuales.
               </p>
             )}
+            <NavLink className="anomalies-list-link" to="/anomalias">
+              Ver listado completo <i className="bi bi-arrow-right" />
+            </NavLink>
         </section>
         <section className="panel intelligence-integration-panel">
           <PanelHead
