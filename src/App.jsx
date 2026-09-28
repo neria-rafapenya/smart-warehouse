@@ -495,6 +495,9 @@ function AnomaliesPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [resolved, setResolved] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("smart_warehouse_resolved_anomalies") || "{}"); } catch { return {}; }
+  });
   const load = async (run) => {
     setLoading(true);
     try {
@@ -502,12 +505,24 @@ function AnomaliesPage() {
         ? await warehouseService.runAIAnomalies()
         : await warehouseService.aiAnomalies();
       setItems(result.findings || []);
+      if (run) {
+        setResolved({});
+        localStorage.removeItem("smart_warehouse_resolved_anomalies");
+      }
       if (run) setMessage("Análisis ejecutado y guardado en auditoría.");
     } catch (error) {
       setMessage(error.message || "No se pudieron cargar las anomalías");
     } finally {
       setLoading(false);
     }
+  };
+  const resolve = (item) => {
+    const key = item.order_id || item.sku;
+    setResolved((current) => {
+      const next = { ...current, [key]: true };
+      localStorage.setItem("smart_warehouse_resolved_anomalies", JSON.stringify(next));
+      return next;
+    });
   };
   useEffect(() => {
     load(false);
@@ -529,7 +544,8 @@ function AnomaliesPage() {
       <section className="panel table-panel">
         <div className="table-meta">
           <span>
-            <strong>{items.length}</strong> anomalías encontradas
+            <strong>{items.length}</strong> anomalías encontradas ·{" "}
+            <strong>{Object.keys(resolved).length}</strong> resueltas
           </span>
           <span className="muted">Motor local determinista</span>
         </div>
@@ -541,11 +557,15 @@ function AnomaliesPage() {
               <th>PEDIDO</th>
               <th>QUÉ HA DETECTADO LA IA</th>
               <th>PROPUESTA</th>
+              <th>ESTADO</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={item.order_id}>
+            {items.map((item) => {
+              const key = item.order_id || item.sku;
+              const isResolved = Boolean(resolved[key]);
+              return <tr key={key} className={isResolved ? "anomaly-resolved" : ""}>
                 <td>
                   <Status
                     tone={item.severity === "critical" ? "danger" : "warning"}
@@ -566,8 +586,10 @@ function AnomaliesPage() {
                   ))}
                 </td>
                 <td>{item.suggestion}</td>
-              </tr>
-            ))}
+                <td><Status tone={isResolved ? "success" : "warning"}>{isResolved ? "Resuelta" : "Pendiente"}</Status></td>
+                <td>{!isResolved && <button className="text-link" onClick={() => resolve(item)}>Resolver</button>}</td>
+              </tr>;
+            })}
           </tbody>
         </table>
         {!loading && !items.length && (

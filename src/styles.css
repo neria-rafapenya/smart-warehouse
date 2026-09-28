@@ -74,6 +74,7 @@
 .anomaly-recommendation small, .anomaly-recommendation span { display: block; }
 .anomaly-recommendation small { color: #2563eb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .anomaly-recommendation span { margin-top: 3px; color: #667085; font-size: 12px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
+.anomaly-resolved { opacity: .62; }
 @media (max-width: 760px) { .anomaly-row { grid-template-columns: 1fr; gap: 9px; } .anomaly-recommendation { padding-left: 0; border-left: 0; } }
 .demo-summary-intro { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #dbe7fb; border-radius: 10px; background: linear-gradient(135deg, #f7faff, #ffffff); }
 .demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 9px; background: #e7efff; color: #2563eb; }
