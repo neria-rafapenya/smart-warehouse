@@ -28,8 +28,9 @@ class LocalDeterministicAIProvider:
             by_sku[str(order.get("sku") or "unknown")].append(order)
 
         findings = []
-        for order in orders:
+        for index, order in enumerate(orders):
             sku = str(order.get("sku") or "unknown")
+            finding_id = order.get("external_id") or f"{sku}-{index}"
             peers = [item for item in by_sku[sku] if item is not order]
             quantities = [_number(item.get("requested_quantity")) for item in peers if _number(item.get("requested_quantity")) > 0]
             prices = [_number(item.get("unit_price")) for item in peers if _number(item.get("unit_price")) > 0]
@@ -49,7 +50,7 @@ class LocalDeterministicAIProvider:
                 continue
             severity = "critical" if len(reasons) >= 2 else "warning"
             findings.append({
-                "order_id": order.get("external_id"),
+                "order_id": finding_id,
                 "sku": sku,
                 "product": order.get("product"),
                 "severity": severity,
