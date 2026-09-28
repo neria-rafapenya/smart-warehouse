@@ -382,3 +382,4 @@ th { font-size: 13px; }
 .topbar .top-menu .nav-link { font-size: 17px !important; }
 .global-status-bar strong { font-size: 28px; }
 .topbar .top-brand strong { font-size: 20px; }
+.topbar .top-brand strong span { font-size: inherit; }
