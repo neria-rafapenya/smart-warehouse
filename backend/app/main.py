@@ -85,7 +85,9 @@ def create_app() -> FastAPI:
         return WarehouseService(MySQLWarehouseRepository(settings))
 
     def ai_service_provider() -> AIService:
-        return AIService(MySQLWarehouseRepository(settings), LocalDeterministicAIProvider())
+        repository = MySQLWarehouseRepository(settings)
+        integration = IntegrationService(repository)
+        return AIService(repository, LocalDeterministicAIProvider(), context_provider=integration.ai_context)
 
     def integration_service_provider() -> IntegrationService:
         return IntegrationService(MySQLWarehouseRepository(settings))
