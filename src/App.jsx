@@ -564,7 +564,7 @@ function AnomaliesPage() {
   return (
     <>
       <PageTitle eyebrow="INTELIGENCIA / DETECCIÓN" title="Anomalías">
-        <Button primary onClick={() => load(true)} disabled={loading}>
+        <Button onClick={() => load(true)} disabled={loading}>
           <i className="bi bi-stars" />{" "}
           {loading ? "Analizando…" : "Analizar ahora"}
         </Button>
