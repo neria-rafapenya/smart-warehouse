@@ -373,3 +373,7 @@ th { font-size: 13px; }
   text-transform: uppercase;
 }
 .topbar .top-actions .copilot-btn { font-family: 'Barlow Condensed', sans-serif; }
+.topbar .top-context,
+.topbar .top-menu .nav-link,
+.topbar .top-actions .copilot-btn { font-size: 15px; }
+.topbar .top-brand small { font-size: 14px; }
