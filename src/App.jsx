@@ -289,7 +289,6 @@ function Header({ onCopilot, onGuide, session }) {
           </details>
         </nav>
         <div className="top-actions">
-          <button className="icon-btn" title="Abrir guía de la demo" onClick={onGuide}><i className="bi bi-question-circle" /></button>
           <button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button>
           <button className="copilot-btn" onClick={onCopilot}><i className="bi bi-stars" /> Copilot</button>
           <button className="icon-btn" title="Cerrar sesión" onClick={logout}><i className="bi bi-box-arrow-right" /></button>
