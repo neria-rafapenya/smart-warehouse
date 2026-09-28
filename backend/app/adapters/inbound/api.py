@@ -358,6 +358,17 @@ def build_router(service_provider: Callable[[], WarehouseService], environment: 
         except ValueError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
 
+    @router.get("/sandbox", tags=["sandbox"])
+    def sandbox_snapshot(current: Annotated[IntegrationService, Depends(integration_service)]):
+        return current.sandbox_snapshot()
+
+    @router.get("/sandbox/{resource}", tags=["sandbox"])
+    def sandbox_resource(resource: str, current: Annotated[IntegrationService, Depends(integration_service)]):
+        try:
+            return {"source": "smart-warehouse-local-sandbox", "resource": resource, "items": current.sandbox_resource(resource)}
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
     @router.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
         return HealthResponse(status="ok", service="smart-warehouse-api", environment=environment)

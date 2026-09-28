@@ -47,6 +47,8 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
     def _permission_for(path: str, method: str) -> str | None:
         if "/ai/" in path:
             return "ai.run" if method != "GET" and path.endswith(("/run", "/chat")) else "ai.read"
+        if "/sandbox" in path:
+            return "warehouse.write" if method not in {"GET", "HEAD"} else "warehouse.read"
         if "/integrations" in path:
             return "administration.write" if method not in {"GET", "HEAD"} else "administration.read"
         if "/events" in path or "/alerts" in path:

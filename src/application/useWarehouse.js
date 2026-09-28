@@ -21,7 +21,11 @@ export const warehouseService = {
   aiChat: message => warehouseRepository.aiChat(message),
   aiSuggestions: () => warehouseRepository.aiSuggestions(),
   aiAnomalies: () => warehouseRepository.aiAnomalies(),
+  aiDemand: sku => warehouseRepository.aiDemand(sku),
+  aiSupplierComparison: () => warehouseRepository.aiSupplierComparison(),
   runAIAnomalies: () => warehouseRepository.runAIAnomalies(),
   syncIntegration: (code, direction) => warehouseRepository.syncIntegration(code, direction),
   productOffers: sku => warehouseRepository.productOffers(sku),
+  sandboxSnapshot: () => warehouseRepository.sandboxSnapshot(),
+  sandboxResource: resource => warehouseRepository.sandboxResource(resource),
 }
