@@ -450,6 +450,7 @@ html { scrollbar-gutter: stable; }
 }
 .anomaly-table-panel td:first-child {
   text-align: center;
+  background: #eaf9f2;
 }
 .anomaly-table-panel th:nth-child(6),
 .anomaly-table-panel td:nth-child(6) {
