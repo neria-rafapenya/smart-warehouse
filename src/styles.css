@@ -63,4 +63,9 @@
 .demo-sitemap > div small { color: #98a2b3; font-size: 10px; line-height: 1.35; margin-top: 2px; }
 .demo-sidebar-foot { display: flex; gap: 7px; margin-top: 15px; padding-top: 12px; border-top: 1px solid #eef2f6; color: #667085; font-size: 10px; line-height: 1.45; }
 .demo-sidebar-foot i { color: #16a36b; font-size: 14px; }
+.demo-summary-intro { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; padding: 16px 18px; border: 1px solid #dbe7fb; border-radius: 10px; background: linear-gradient(135deg, #f7faff, #ffffff); }
+.demo-summary-icon { display: grid; flex: 0 0 34px; height: 34px; place-items: center; border-radius: 9px; background: #e7efff; color: #2563eb; }
+.demo-summary-intro strong { display: block; margin-bottom: 5px; color: #1d2939; }
+.demo-summary-intro p { margin: 0 0 5px; color: #667085; font-size: 12px; line-height: 1.5; }
+.demo-summary-intro code { padding: 2px 5px; border-radius: 4px; background: #eef2f7; color: #475467; font-size: 11px; }
 @media (max-width: 1050px) { .intelligence-shell { grid-template-columns: 1fr; } .demo-sidebar { position: static; } }
