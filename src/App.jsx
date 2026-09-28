@@ -4,6 +4,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -493,6 +494,7 @@ function IntelligenceDashboard({ onCopilot }) {
 }
 
 function AnomaliesPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -566,7 +568,7 @@ function AnomaliesPage() {
             {items.map((item) => {
               const key = item.order_id || item.sku;
               const isResolved = Boolean(resolved[key]);
-              return <tr key={key} className={isResolved ? "anomaly-resolved" : ""}>
+              return <tr key={key} className={`anomaly-table-row ${isResolved ? "anomaly-resolved" : ""}`} onClick={() => navigate(`/anomalias/${encodeURIComponent(key)}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") navigate(`/anomalias/${encodeURIComponent(key)}`); }} tabIndex="0" role="link">
                 <td>
                   <Status
                     tone={item.severity === "critical" ? "danger" : "warning"}
@@ -588,7 +590,7 @@ function AnomaliesPage() {
                 </td>
                 <td>{item.suggestion}</td>
                 <td><Status tone={isResolved ? "success" : "warning"}>{isResolved ? "Resuelta" : "Pendiente"}</Status></td>
-                <td>{!isResolved && <button className="text-link" onClick={() => resolve(item)}>Resolver</button>}</td>
+                <td>{!isResolved && <button className="text-link anomaly-resolve-button" onClick={(event) => { event.stopPropagation(); resolve(item); }}>Resolver</button>}</td>
               </tr>;
             })}
           </tbody>
