@@ -377,3 +377,5 @@ th { font-size: 13px; }
 .topbar .top-menu .nav-link,
 .topbar .top-actions .copilot-btn { font-size: 15px; }
 .topbar .top-brand small { font-size: 14px; }
+.topbar .top-menu .nav-link,
+.topbar .top-actions .copilot-btn { font-size: 16px !important; }
