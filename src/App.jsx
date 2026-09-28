@@ -156,7 +156,7 @@ function App() {
             onGuide={() => setGuideOpen(true)}
             session={session}
           />
-          <div className="page-content container">
+          <div className="page-content container-fluid">
             <Routes>
               <Route
                 path="/"
@@ -252,97 +252,45 @@ function Header({ onCopilot, onGuide, session }) {
     .slice(4)
     .some((item) => location.pathname.startsWith(item.to));
   return (
-    <header
-      className={`topbar ${location.pathname === "/" ? "dashboard-topbar" : ""}`}
-    >
-      <div className="container">
-        <div className="row align-items-center gy-3">
-          <div className="col-12 col-xl-3">
-            <NavLink to="/" className="top-brand">
-              <span className="brand-mark">
-                <i className="bi bi-boxes" />
-              </span>
-              <span>
-                <strong>
-                  smart<span>warehouse</span>
-                </strong>
-                <small>{session?.role || "CONTROL CENTER"}</small>
-              </span>
+    <header className={`topbar ${location.pathname === "/" ? "dashboard-topbar" : ""}`}>
+      <div className="container-fluid topbar-inner">
+        <NavLink to="/" className="top-brand">
+          <span className="brand-mark"><i className="bi bi-boxes" /></span>
+          <span>
+            <strong>smart<span>warehouse</span></strong>
+            <small>{session?.role || "INTELLIGENCE PLATFORM"}</small>
+          </span>
+        </NavLink>
+        <div className="top-context">
+          <span>Smart Warehouse</span>
+          <i className="bi bi-chevron-right" />
+          <strong>{title}</strong>
+        </div>
+        <nav className="top-menu nav nav-pills">
+          {nav.slice(0, 4).map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+              <i className={`bi ${item.icon}`} />
+              <span>{item.label}</span>
+              {item.count && <em>{item.count}</em>}
             </NavLink>
-          </div>
-          <div className="col-12 col-xl-7">
-            <nav className="top-menu nav nav-pills">
-              {nav.slice(0, 4).map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    isActive ? "nav-link active" : "nav-link"
-                  }
-                >
-                  <i className={`bi ${item.icon}`} />
-                  <span>{item.label}</span>
-                  {item.count && <em>{item.count}</em>}
+          ))}
+          <details className={`top-dropdown ${moreActive ? "active" : ""}`}>
+            <summary className="nav-link"><i className="bi bi-three-dots" /><span>Más</span><i className="bi bi-chevron-down dropdown-chevron" /></summary>
+            <div className="dropdown-menu show">
+              {nav.slice(4).map((item) => (
+                <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"}>
+                  <i className={`bi ${item.icon}`} /><span>{item.label}</span>{item.count && <em>{item.count}</em>}
                 </NavLink>
               ))}
-              <details className={`top-dropdown ${moreActive ? "active" : ""}`}>
-                <summary className="nav-link">
-                  <i className="bi bi-three-dots" />
-                  <span>Más</span>
-                  <i className="bi bi-chevron-down dropdown-chevron" />
-                </summary>
-                <div className="dropdown-menu show">
-                  {nav.slice(4).map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      className={({ isActive }) =>
-                        isActive ? "dropdown-item active" : "dropdown-item"
-                      }
-                    >
-                      <i className={`bi ${item.icon}`} />
-                      <span>{item.label}</span>
-                      {item.count && <em>{item.count}</em>}
-                    </NavLink>
-                  ))}
-                </div>
-              </details>
-            </nav>
-          </div>
-          <div className="col-12 col-xl-2">
-            <div className="top-actions justify-content-xl-end">
-              <button
-                className="icon-btn"
-                title="Abrir guía de la demo"
-                onClick={onGuide}
-              >
-                <i className="bi bi-question-circle" />
-              </button>
-              <button className="icon-btn notification" title="Notificaciones">
-                <i className="bi bi-bell" />
-                <b>3</b>
-              </button>
-              <button className="copilot-btn" onClick={onCopilot}>
-                <i className="bi bi-stars" /> Copilot
-              </button>
-              <button
-                className="icon-btn"
-                title="Cerrar sesión"
-                onClick={logout}
-              >
-                <i className="bi bi-box-arrow-right" />
-              </button>
             </div>
-          </div>
+          </details>
+        </nav>
+        <div className="top-actions">
+          <button className="icon-btn" title="Abrir guía de la demo" onClick={onGuide}><i className="bi bi-question-circle" /></button>
+          <button className="icon-btn notification" title="Notificaciones"><i className="bi bi-bell" /><b>3</b></button>
+          <button className="copilot-btn" onClick={onCopilot}><i className="bi bi-stars" /> Copilot</button>
+          <button className="icon-btn" title="Cerrar sesión" onClick={logout}><i className="bi bi-box-arrow-right" /></button>
         </div>
-        {location.pathname !== "/" && (
-          <div className="row">
-            <div className="col-12">
-              <h1>{title}</h1>
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );
